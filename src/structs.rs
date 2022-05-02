@@ -1,9 +1,12 @@
 elrond_wasm::imports!();
+elrond_wasm::derive_imports!();
 
-pub struct Flip<M : ManagedApi<Self::Api>> {
+#[derive(TopEncode, TopDecode, NestedEncode, NestedDecode, TypeAbi)]
+pub struct Flip<M : ManagedTypeApi> {
     pub id: u64,
+    pub player_address: ManagedAddress<Self::Api>,
     pub token_identifier: TokenIdentifier<M>,
     pub token_nonce: u64,
-    pub amount: BigUInt<M>,
+    pub amount: BigUint<M>,
     pub block_nonce: u64
 }

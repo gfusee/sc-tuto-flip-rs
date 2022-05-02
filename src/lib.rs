@@ -27,7 +27,7 @@ pub trait FlipContract: ContractBase +
     #[endpoint]
     fn flip(
         &self,
-        #[payment_amount] payment_amount: BigInt<Self::Api>,
+        #[payment_amount] payment_amount: BigUint<Self::Api>,
         #[payment_token] payment_token: TokenIdentifier<Self::Api>,
         #[payment_nonce] payment_nonce: u64
     ) {
@@ -59,7 +59,7 @@ pub trait FlipContract: ContractBase +
         );
 
         let max_player_profit = &payment_amount * &BigUint::from(2u64);
-        let max_allowed_profit = token_reserve * self.maximum_bet_percent() / HUNDRED_PERCENT;
+        let max_allowed_profit = token_reserve * self.maximum_bet_percent().get() / HUNDRED_PERCENT;
 
         require!(
             max_allowed_profit >= max_player_profit,
@@ -68,11 +68,15 @@ pub trait FlipContract: ContractBase +
 
         let flip = Flip {
             id: flip_id,
+            player_address: self.blockchain().get_caller(),
             token_identifier: payment_token,
             token_nonce: payment_nonce,
             amount: payment_amount,
             block_nonce: self.blockchain().get_block_nonce()
         };
+
+        self.token_reserve().update(|reserve| *reserve -= max_allowed_profit);
+        self.flip_for_id(flip_id).set(flip);
 
     }
 

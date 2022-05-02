@@ -32,7 +32,7 @@ pub trait StorageModule {
 
     #[view(bountyAmount)]
     #[storage_mapper("bounty_amount")]
-    fn bounty_amount(&self) -> SingleValueMapper<Self::Api, BigInt<Self::Api>>;
+    fn bounty_amount(&self) -> SingleValueMapper<Self::Api, BigUint<Self::Api>>;
 
     #[view(lastBountyFlipId)]
     #[storage_mapper("last_bounty_flip_id")]
