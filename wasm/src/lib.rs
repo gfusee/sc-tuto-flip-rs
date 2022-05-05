@@ -7,15 +7,22 @@
 elrond_wasm_node::wasm_endpoints! {
     flip
     (
-        bountyAmount
         flip
+        flipBounty
         flipForId
-        flip_bounty
+        getBountyAmount
+        getBountyReserve
+        getLastBountyFlipId
+        getLastFlipId
+        getMaximumBet
+        getMaximumProfitPercent
+        getMinimumBlockBounty
+        getOwnerPercentFees
         getTokenReserve
-        incentivePercentFees
-        lastBountyFlipId
-        lastFlipId
-        ownerPercentFees
+        increaseReserve
+        setMaximumBet
+        setMaximumBetPercent
+        withdrawReserve
     )
 }
 

@@ -3,25 +3,36 @@
 use core::cmp::min;
 use crate::structs::Flip;
 
-const HUNDRED_PERCENT: u64 = 10000;
+const HUNDRED_PERCENT: u64 = 100_000_000;
 
 mod storage;
-mod structs;elrond_wasm::imports!();
+mod structs;
+mod admin;
 
-/// An empty contract. To be used as a template when starting a new contract from scratch.
+elrond_wasm::imports!();
+elrond_wasm::derive_imports!();
+
 #[elrond_wasm::derive::contract]
 pub trait FlipContract:// ContractBase +
-    storage::StorageModule
+    storage::StorageModule + admin::AdminModule
 {
 
     #[init]
     fn init(
         &self,
         owner_percent_fees: u64,
-        incentive_percent_fees: u64
+        bounty_percent_fees: u64,
+        minimum_block_bounty: u64
     ) {
         self.owner_percent_fees().set(owner_percent_fees);
-        self.incentive_percent_fees().set(incentive_percent_fees);
+        self.bounty_percent_fees().set(bounty_percent_fees);
+
+        require!(
+            minimum_block_bounty > 0u64,
+            "minimum_block_bounty is zero"
+        );
+
+        self.minimum_block_bounty().set(minimum_block_bounty)
     }
 
     #[payable("*")]
@@ -49,6 +60,26 @@ pub trait FlipContract:// ContractBase +
             "no token reserve"
         );
 
+        require!(
+            !self.maximum_bet(&payment_token, payment_nonce).is_empty(),
+            "no maximum bet"
+        );
+
+        require!(
+            !self.maximum_bet_percent(&payment_token, payment_nonce).is_empty(),
+            "no maximum bet percent"
+        );
+
+        let maximum_bet = self.maximum_bet(
+            &payment_token,
+            payment_nonce
+        ).get();
+
+        let maximum_bet_percent = self.maximum_bet_percent(
+            &payment_token,
+            payment_nonce
+        ).get();
+
         let token_reserve = self.token_reserve(
             &payment_token,
             payment_nonce
@@ -60,8 +91,8 @@ pub trait FlipContract:// ContractBase +
         );
 
         let max_allowed_bet = min(
-            self.maximum_profit().get(),
-            token_reserve * self.maximum_profit_percent().get() / HUNDRED_PERCENT
+            maximum_bet,
+            token_reserve * &BigUint::from(maximum_bet_percent) / HUNDRED_PERCENT
         );
 
         require!(
@@ -69,12 +100,12 @@ pub trait FlipContract:// ContractBase +
             "bet too high"
         );
 
-        let owner_profits = &payment_amount * self.owner_percent_fees().get() / HUNDRED_PERCENT;
-        let bounty = &payment_amount * self.bounty_percent().get() / HUNDRED_PERCENT;
+        let owner_profits = &payment_amount * &BigUint::from(self.owner_percent_fees().get()) / HUNDRED_PERCENT;
+        let bounty = &payment_amount * &BigUint::from(self.bounty_percent_fees().get()) / HUNDRED_PERCENT;
         let amount = &payment_amount - &bounty - &owner_profits;
 
         require!(
-            max_allowed_profit >= max_player_profit,
+            amount <= max_allowed_bet,
             "too much bet"
         );
 
@@ -83,8 +114,8 @@ pub trait FlipContract:// ContractBase +
             player_address: self.blockchain().get_caller(),
             token_identifier: payment_token.clone(),
             token_nonce: payment_nonce,
-            amount,
-            bounty,
+            amount: amount.clone(),
+            bounty: bounty.clone(),
             block_nonce: self.blockchain().get_block_nonce(),
             minimum_block_bounty: self.minimum_block_bounty().get()
         };
@@ -98,12 +129,10 @@ pub trait FlipContract:// ContractBase +
                 &[]
             );
 
-        let reserved_tokens = &amount * BigUint::from(2u8) + &bounty;
-
         self.token_reserve(
             &payment_token,
             payment_nonce
-        ).update(|reserve| *reserve -= &reserved_tokens);
+        ).update(|reserve| *reserve -= &amount);
 
         self.flip_for_id(flip_id).set(flip);
         self.last_flip_id().set(flip_id);
@@ -142,7 +171,7 @@ pub trait FlipContract:// ContractBase +
 
             let flip = self.flip_for_id(flip_id).get();
 
-            if current_block_nonce <= flip.block_nonce + flip.minimum_block_bounty {
+            if current_block_nonce < flip.block_nonce + flip.minimum_block_bounty {
                 break;
             }
 
@@ -152,6 +181,10 @@ pub trait FlipContract:// ContractBase +
             );
 
             bounty_flip_id += 1u64;
+        }
+
+        if bounty_flip_id == last_bounty_flip_id {
+            sc_panic!("no bounty")
         }
 
         self.last_bounty_flip_id().set(bounty_flip_id);
@@ -177,12 +210,12 @@ pub trait FlipContract:// ContractBase +
                 &[]
             );
 
-        let profit_if_win = &flip.amount * BigUint::from(2u8);
+        let profit_if_win = &flip.amount * &BigUint::from(2u8);
 
         if is_win {
             self.send()
                 .direct(
-                    &self.blockchain().get_owner_address(),
+                    &flip.player_address,
                     &flip.token_identifier,
                     flip.token_nonce,
                     &profit_if_win,

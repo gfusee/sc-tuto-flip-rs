@@ -7,15 +7,25 @@
                 "address:owner": {
                     "nonce": "1",
                     "balance": "0"
+                },
+                "address:bounty1": {
+                    "nonce": "1",
+                    "balance": "0"
                 }
             },
             "newAddresses": [
                 {
                     "creatorAddress": "address:owner",
                     "creatorNonce": "1",
-                    "newAddress": "sc:empty"
+                    "newAddress": "sc:flip"
                 }
             ]
+        },
+        {
+            "step": "setState",
+            "currentBlockInfo": {
+                "blockNonce": "0"
+            }
         },
         {
             "step": "scDeploy",
@@ -23,7 +33,11 @@
             "tx": {
                 "from": "address:owner",
                 "contractCode": "file:../output/flip.wasm",
-                "arguments": [],
+                "arguments": [
+                    "5,000,000",
+                    "1,000,000",
+                    "1"
+                ],
                 "gasLimit": "5,000,000",
                 "gasPrice": "0"
             },

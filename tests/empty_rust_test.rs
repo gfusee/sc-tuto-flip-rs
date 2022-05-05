@@ -2,22 +2,22 @@ use elrond_wasm::types::Address;
 use elrond_wasm_debug::{rust_biguint, testing_framework::*, DebugApi};
 use flip::*;
 
-const WASM_PATH: &'static str = "output/empty.wasm";
+const WASM_PATH: &'static str = "output/flip.wasm";
 
 struct ContractSetup<ContractObjBuilder>
 where
-    ContractObjBuilder: 'static + Copy + Fn() -> empty::ContractObj<DebugApi>,
+    ContractObjBuilder: 'static + Copy + Fn() -> flip::ContractObj<DebugApi>,
 {
     pub blockchain_wrapper: BlockchainStateWrapper,
     pub owner_address: Address,
-    pub contract_wrapper: ContractObjWrapper<empty::ContractObj<DebugApi>, ContractObjBuilder>,
+    pub contract_wrapper: ContractObjWrapper<flip::ContractObj<DebugApi>, ContractObjBuilder>,
 }
 
 fn setup_contract<ContractObjBuilder>(
     cf_builder: ContractObjBuilder,
 ) -> ContractSetup<ContractObjBuilder>
 where
-    ContractObjBuilder: 'static + Copy + Fn() -> empty::ContractObj<DebugApi>,
+    ContractObjBuilder: 'static + Copy + Fn() -> flip::ContractObj<DebugApi>,
 {
     let rust_zero = rust_biguint!(0u64);
     let mut blockchain_wrapper = BlockchainStateWrapper::new();
@@ -31,7 +31,7 @@ where
 
     blockchain_wrapper
         .execute_tx(&owner_address, &cf_wrapper, &rust_zero, |sc| {
-            sc.init();
+            sc.init(0, 0, 0);
         })
         .assert_ok();
 
@@ -46,7 +46,7 @@ where
 
 #[test]
 fn deploy_test() {
-    let mut setup = setup_contract(empty::contract_obj);
+    let mut setup = setup_contract(flip::contract_obj);
 
     // simulate deploy
     setup
@@ -56,7 +56,7 @@ fn deploy_test() {
             &setup.contract_wrapper,
             &rust_biguint!(0u64),
             |sc| {
-                sc.init();
+                sc.init(0, 0, 0);
             },
         )
         .assert_ok();
