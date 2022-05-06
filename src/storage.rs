@@ -8,6 +8,10 @@ pub trait StorageModule {
     #[storage_mapper("owner_percent_fees")]
     fn owner_percent_fees(&self) -> SingleValueMapper<Self::Api, u64>;
 
+    #[view(getBountyAmount)]
+    #[storage_mapper("bounty_percent_fees")]
+    fn bounty_percent_fees(&self) -> SingleValueMapper<Self::Api, u64>;
+
     #[view(getMaximumBet)]
     #[storage_mapper("maximum_bet")]
     fn maximum_bet(
@@ -36,28 +40,16 @@ pub trait StorageModule {
         token_nonce: u64
     ) -> SingleValueMapper<Self::Api, BigUint<Self::Api>>;
 
-    #[view(getBountyReserve)]
-    #[storage_mapper("bounty_reserve")]
-    fn bounty_reserve(
-        &self,
-        token_identifier: &TokenIdentifier<Self::Api>,
-        token_nonce: u64
-    ) -> SingleValueMapper<Self::Api, BigUint<Self::Api>>;
-
     #[view(flipForId)]
     #[storage_mapper("flip_for_id")]
     fn flip_for_id(&self, id: u64) -> SingleValueMapper<Self::Api, Flip<Self::Api>>;
 
-    #[view(getBountyAmount)]
-    #[storage_mapper("bounty_percent_fees")]
-    fn bounty_percent_fees(&self) -> SingleValueMapper<Self::Api, u64>;
+    #[view(getLastFlipId)]
+    #[storage_mapper("last_flip_id")]
+    fn last_flip_id(&self) -> SingleValueMapper<Self::Api, u64>;
 
     #[view(getLastBountyFlipId)]
     #[storage_mapper("last_bounty_flip_id")]
     fn last_bounty_flip_id(&self) -> SingleValueMapper<Self::Api, u64>;
-
-    #[view(getLastFlipId)]
-    #[storage_mapper("last_flip_id")]
-    fn last_flip_id(&self) -> SingleValueMapper<Self::Api, u64>;
 
 }

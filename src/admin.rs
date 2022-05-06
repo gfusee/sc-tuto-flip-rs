@@ -47,7 +47,7 @@ pub trait AdminModule:// ContractBase +
 
         self.send()
             .direct(
-                &self.blockchain().get_owner_address(),
+                &self.blockchain().get_caller(),
                 &token_identifier,
                 token_nonce,
                 &amount,
@@ -94,6 +94,22 @@ pub trait AdminModule:// ContractBase +
             &token_identifier,
             token_nonce
         ).set(amount);
+
+    }
+
+    #[only_owner]
+    #[endpoint(setMinimumBlockBounty)]
+    fn set_minimum_block_bounty(
+        &self,
+        minimum_block_bounty: u64
+    ) {
+
+        require!(
+            minimum_block_bounty > 0u64,
+            "minimum_block_bounty zero"
+        );
+
+        self.minimum_block_bounty().set(minimum_block_bounty);
 
     }
 

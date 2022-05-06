@@ -11,7 +11,6 @@ elrond_wasm_node::wasm_endpoints! {
         flipBounty
         flipForId
         getBountyAmount
-        getBountyReserve
         getLastBountyFlipId
         getLastFlipId
         getMaximumBet
@@ -22,6 +21,7 @@ elrond_wasm_node::wasm_endpoints! {
         increaseReserve
         setMaximumBet
         setMaximumBetPercent
+        setMinimumBlockBounty
         withdrawReserve
     )
 }
