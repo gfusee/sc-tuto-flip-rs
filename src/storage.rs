@@ -20,8 +20,8 @@ pub trait StorageModule {
         token_nonce: u64
     ) -> SingleValueMapper<Self::Api, BigUint<Self::Api>>;
 
-    #[view(getMaximumProfitPercent)]
-    #[storage_mapper("maximum_profit_percent")]
+    #[view(getMaximumBetPercent)]
+    #[storage_mapper("maximum_bet_percent")]
     fn maximum_bet_percent(
         &self,
         token_identifier: &TokenIdentifier<Self::Api>,

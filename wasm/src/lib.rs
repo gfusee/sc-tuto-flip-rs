@@ -14,7 +14,7 @@ elrond_wasm_node::wasm_endpoints! {
         getLastBountyFlipId
         getLastFlipId
         getMaximumBet
-        getMaximumProfitPercent
+        getMaximumBetPercent
         getMinimumBlockBounty
         getOwnerPercentFees
         getTokenReserve

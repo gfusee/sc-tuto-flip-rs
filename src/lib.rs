@@ -44,19 +44,13 @@ pub trait FlipContract:// ContractBase +
         #[payment_nonce] payment_nonce: u64
     ) {
 
-        let last_flip_id = if self.last_flip_id().is_empty() {
-            0u64
-        } else {
-            self.last_flip_id().get()
-        };
-
-        let flip_id = last_flip_id + 1;
+        let token_reserve = self.token_reserve(
+            &payment_token,
+            payment_nonce
+        ).get();
 
         require!(
-            !self.token_reserve(
-                &payment_token,
-                payment_nonce
-            ).is_empty(),
+            token_reserve > 0u64,
             "no token reserve"
         );
 
@@ -80,24 +74,9 @@ pub trait FlipContract:// ContractBase +
             payment_nonce
         ).get();
 
-        let token_reserve = self.token_reserve(
-            &payment_token,
-            payment_nonce
-        ).get();
-
-        require!(
-            token_reserve > 0u64,
-            "no reserve"
-        );
-
         let max_allowed_bet = min(
             maximum_bet,
             token_reserve * &BigUint::from(maximum_bet_percent) / HUNDRED_PERCENT
-        );
-
-        require!(
-            payment_amount <= max_allowed_bet,
-            "bet too high"
         );
 
         let owner_profits = &payment_amount * &BigUint::from(self.owner_percent_fees().get()) / HUNDRED_PERCENT;
@@ -108,6 +87,14 @@ pub trait FlipContract:// ContractBase +
             amount <= max_allowed_bet,
             "too much bet"
         );
+
+        let last_flip_id = if self.last_flip_id().is_empty() {
+            0u64
+        } else {
+            self.last_flip_id().get()
+        };
+
+        let flip_id = last_flip_id + 1;
 
         let flip = Flip {
             id: flip_id,
