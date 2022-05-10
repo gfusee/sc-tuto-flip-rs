@@ -107,6 +107,11 @@ pub trait FlipContract:// ContractBase +
             minimum_block_bounty: self.minimum_block_bounty().get()
         };
 
+        self.token_reserve(
+            &payment_token,
+            payment_nonce
+        ).update(|reserve| *reserve -= &amount);
+
         self.send()
             .direct(
                 &self.blockchain().get_owner_address(),
@@ -115,11 +120,6 @@ pub trait FlipContract:// ContractBase +
                 &owner_profits,
                 &[]
             );
-
-        self.token_reserve(
-            &payment_token,
-            payment_nonce
-        ).update(|reserve| *reserve -= &amount);
 
         self.flip_for_id(flip_id).set(flip);
         self.last_flip_id().set(flip_id);
