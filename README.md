@@ -110,7 +110,7 @@ Petit update de dernière minute: la version `0.31.1` est sortie, on ne va pas l
 
 Pour changer la version on va dans le fichier `Cargo.toml` et on change les version d’`elrond-wasm-XXX` pour mettre la `0.30.0`.
 
-```aidl
+```rust
 [package]
 name = "flip"
 version = "0.0.0"
@@ -135,3 +135,165 @@ Et on fait la même modification dans les `Cargo.toml` des dossiers `wasm` et `m
 
 Le projet est setup! 
 
+## PARTIE 2C: Storage du contrat
+
+On va créer un nouveau fichier `storage.rs` dans le dossier `src`, ouvrez le fichier et sur **Intellij** vous devriez avoir un avertissement **File is not included in module tree, [...]**, sélectionnez **Attach file to lib.rs**
+
+On va déclarer un module `StorageModule` dans le fichier `storage.rs`, pour vulgariser on peut voir un module comme une collection de code, ça permet de ne pas avoir un fichier `lib`.rs qui fait 30000 lignes.
+
+On écrit pour cela le code suivant dans `storage.rs`
+
+```rust
+elrond_wasm::imports!();
+
+#[elrond_wasm::derive::module]
+pub trait StorageModule {
+
+}
+```
+
+Il faut maintenant dire à notre contrat que notre module existe (je vulgarise très fortement en disant ça), dans notre fichier `lib.rs` on le fait ainsi :
+
+```rust
+#![no_std]
+
+mod storage;
+
+elrond_wasm::imports!();
+
+#[elrond_wasm::derive::contract]
+pub trait FlipContract:// ContractBase +
+    storage::StorageModule
+{
+    #[init]
+    fn init(&self) {}
+}
+```
+
+On va aussi avoir besoin de stocker des types plus complexes que des nombres ou des chaînes de caractères, comme l’ensemble des infos d’un flip (l’adresse du joueur, le block sur lequel le flip est initié, etc...)
+
+On voit dans ce code par exemple qu’un Flip contient un **id, l’adresse du joueur, le token du flip**, etc... (ouais j’ai oublié de préciser mais le flip pourra se faire sur d’autres tokens que EGLD lol).
+
+On va donc créer un fichier `struct.rs` dans lequel nous allons déclarer nos types personalisés (nos structures).
+On y place le code suivant:
+
+```rust
+elrond_wasm::imports!();
+elrond_wasm::derive_imports!();
+
+#[derive(TopEncode, TopDecode, NestedEncode, NestedDecode, TypeAbi)]
+pub struct Flip<M : ManagedTypeApi> {
+    pub id: u64,
+    pub player_address: ManagedAddress<M>,
+    pub token_identifier: TokenIdentifier<M>,
+    pub token_nonce: u64,
+    pub amount: BigUint<M>,
+    pub bounty: BigUint<M>,
+    pub block_nonce: u64,
+    pub minimum_block_bounty: u64
+}
+```
+
+On va maintenant placer nos variables qui vont être stockées dans la blockchain (le storage).
+
+On se place à l’intérieur de `StorageModule` dans `storage.rs` et on va y ajouter le code suivant :
+
+```rust
+#[view(getOwnerPercentFees)]
+#[storage_mapper("owner_percent_fees")]
+fn owner_percent_fees(&self) -> SingleValueMapper<Self::Api, u64>;
+
+#[view(getBountyAmount)]
+#[storage_mapper("bounty_percent_fees")]
+fn bounty_percent_fees(&self) -> SingleValueMapper<Self::Api, u64>;
+```
+
+On a ici rajouté 2 variables qui vont déterminer :
+
+- le % que nous allons prendre sur chaque flip
+- le % que va prendre la personne qui va générer l’aléatoire (cf partie 1a)
+
+On va appeler “bounty” l’action de gagner un % du flip en contrepartie de la génération de l’aléatoire.
+
+Pour donner un ordre de grandeur, 100000000 = 100%, ainsi par exemple mettre `owner_percent_fees` à 5000000 c’est prendre 5% de frais.
+
+On fait ainsi car les nombres à virgule (flottants) n’existent pas quand on dev un smart contract, diviser par 100000000 au lieu de 100 permet de faire des frais plus précis comme 1.57% par exemple.
+
+Maintenant nous allons rajouter les variables pour limiter la mise maximale :
+
+```rust
+#[view(getMaximumBet)]
+#[storage_mapper("maximum_bet")]
+fn maximum_bet(
+    &self,
+    token_identifier: &TokenIdentifier<Self::Api>,
+    token_nonce: u64
+) -> SingleValueMapper<Self::Api, BigUint<Self::Api>>;
+
+#[view(getMaximumBetPercent)]
+#[storage_mapper("maximum_bet_percent")]
+fn maximum_bet_percent(
+    &self,
+    token_identifier: &TokenIdentifier<Self::Api>,
+    token_nonce: u64
+) -> SingleValueMapper<Self::Api, u64>;
+```
+
+`maximum_bet` représente la mise maximale possible pour un certain token, `maximum_bet_percent` aussi mais en % (même échelle qu’au-dessus)  du nombre du token que possède le contrat.
+
+Par exemple on met `maximum_bet` à 1 $EGLD et `maximum_bet_percent` à 10%, la mise maximale autorisée sera le + petit d’un des deux nombres suivants :
+
+- 1 $EGLD
+- 10% du nombre d’EGLD que possède le contrat
+
+On va rajouter une variable qui détermine le nombre de blocks à attendre avant de pouvoir bounty un flip :
+
+```rust
+#[view(getMinimumBlockBounty)]
+#[storage_mapper("minimum_block_bounty")]
+fn minimum_block_bounty(&self) -> SingleValueMapper<Self::Api, u64>;
+```
+
+Puis une variable qui nous indique la réserve d’un token disponible pour les flips:
+
+```rust
+#[view(getTokenReserve)]
+#[storage_mapper("token_reserve")]
+fn token_reserve(
+    &self,
+    token_identifier: &TokenIdentifier<Self::Api>,
+    token_nonce: u64
+) -> SingleValueMapper<Self::Api, BigUint<Self::Api>>;
+```
+
+Vous allez me dire qu’on pourrait juste récupérer la balance du token pour notre contrat, et bien ça ne marcherait pas vraiment.
+
+En effet, un flip se fait en 2 temps, la mise puis l’execution via le bounty, mais entre ces deux moments il faut bloquer l’argent afin d’avoir de quoi payer en cas de victoire du joueur, c’est à ça que sert cette variable
+
+Intuitivement, `token_reserve = balance - token bloqués`
+
+Et pour finir on va rajouter 3 variables concernant notre flip :
+
+```rust
+#[view(flipForId)]
+#[storage_mapper("flip_for_id")]
+fn flip_for_id(&self, id: u64) -> SingleValueMapper<Self::Api, Flip<Self::Api>>;
+
+#[view(getLastFlipId)]
+#[storage_mapper("last_flip_id")]
+fn last_flip_id(&self) -> SingleValueMapper<Self::Api, u64>;
+
+#[view(getLastBountyFlipId)]
+#[storage_mapper("last_bounty_flip_id")]
+fn last_bounty_flip_id(&self) -> SingleValueMapper<Self::Api, u64>;
+```
+
+`flip_for_id` contient les infos sur un flip (notre struct Flip déclarée un peu + haut)
+
+Parlons rapidement des deux autres variables:
+
+`last_flip_id` représente l’id du dernier flip fait, on fait +1 à chaque fois qu’un joueur place une mise.
+
+`last_bounty_flip_id` représente le dernier flip pour lequel a déjà eu lieu l’exécution.
+
+Lorsque quelqu’un va vouloir bounty, il ne va pas générer l’aléatoire pour un flip mais pour tous les flips entre `last_bounty_flip_id` et `last_flip_id` (en prenant en compte minimal_block_bounty) en one shot (et donc plusieurs rewards d’un coup).
