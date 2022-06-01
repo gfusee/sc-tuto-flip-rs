@@ -14,6 +14,11 @@ Links to tutorial :
 ## SOMMAIRE
 
 - [INTRODUCTION : Créer une dApp de flip sur Elrond](#introduction)
+- [PARTIE 2A: Réflexions fonctionnelles](#partie2a)
+- [PARTIE 2B: Initialisation du projet](#partie2b)
+- [PARTIE 2C: Storage du contrat](#partie2c)
+- [PARTIE 2D: Administration du contrat](#partie2d)
+
 
 ## <a name="introduction"></a>INTRODUCTION : Créer une dApp de flip sur Elrond
 
@@ -37,7 +42,7 @@ Ce que nous n'allons PAS faire :
 - Faire une interface jolie, le but de ce thread est de dev
 - Déployer de facon propre & sécurisée le tout (s'il y a bcp de demande on peut se faire ca en bonus)
 
-## PARTIE 1 : Setup de l'environnement de dev
+## <a name="partie1"></a>PARTIE 1 : Setup de l'environnement de dev
 
 Tout d’abord il vous faudra installer **erdpy**, il s’agit d’un outil vous permettant de compiler, tester et debuguer vos smart contracts, pour l’installer suivez la doc Elrond : [Elrond doc installing erdpy](https://docs.elrond.com/sdk-and-tools/erdpy/installing-erdpy/)
 
@@ -57,7 +62,7 @@ On va tester l’installation rapidement en téléchargeant un contrat d’Elron
 
 - Laissez tourner, si à la fin vous voyez **WASM file generated: blablabla** alors votre installation tourne niquel et vous êtes prêts pour la partie 2 où nous allons coder le contrat.
 
-## PARTIE 2A: Réflexions fonctionnelles
+## <a name="partie2a"></a>PARTIE 2A: Réflexions fonctionnelles
 
 Vous avez votre environnement de prêt? Parfait car nous n'allons pas encore coder.
 On va se poser calmement et faire un petit cahier des charges de ce que notre contrat fera, comment et avec quelles précautions.
@@ -92,7 +97,7 @@ Pour inciter d'autres utilisateurs (joueur ou non) à faire cette transaction on
 En clair si joueur A place 1 EGLD au bloc N, dès le bloc N-1 un utilisateur B pourra générer son flip et touchera un % de la mise de 1 EGLD
 Évidemment premier arrivé premier servi afin de ne pas laisser le temps de tester sur une blockchain clonée.
 
-## PARTIE 2B: Initialisation du projet
+## <a name="partie2b"></a>PARTIE 2B: Initialisation du projet
 
 On va commencer par se placer avec le terminal dans le dossier où vous aller créer le projet, dans mon cas `~/Documents/Elrond` puis on va lancer la commande `erdpy contract new flip –template empty`, un nouveau dossier “**flip**” va apparaître.
 
@@ -139,7 +144,7 @@ Et on fait la même modification dans les `Cargo.toml` des dossiers `wasm` et `m
 
 Le projet est setup! 
 
-## PARTIE 2C: Storage du contrat
+## <a name="partie2c"></a>PARTIE 2C: Storage du contrat
 
 On va créer un nouveau fichier `storage.rs` dans le dossier `src`, ouvrez le fichier et sur **Intellij** vous devriez avoir un avertissement **File is not included in module tree, [...]**, sélectionnez **Attach file to lib.rs**
 
@@ -302,7 +307,7 @@ Parlons rapidement des deux autres variables:
 
 Lorsque quelqu’un va vouloir bounty, il ne va pas générer l’aléatoire pour un flip mais pour tous les flips entre `last_bounty_flip_id` et `last_flip_id` (en prenant en compte minimal_block_bounty) en one shot (et donc plusieurs rewards d’un coup).
 
-## PARTIE 2D: Administration du contrat
+## <a name="partie2d"></a>PARTIE 2D: Administration du contrat
 
 On va créer un module `AdminModule` dans un nouveau fichier `admin.rs` dans le dossier `src`.
 
