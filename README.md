@@ -297,3 +297,176 @@ Parlons rapidement des deux autres variables:
 `last_bounty_flip_id` représente le dernier flip pour lequel a déjà eu lieu l’exécution.
 
 Lorsque quelqu’un va vouloir bounty, il ne va pas générer l’aléatoire pour un flip mais pour tous les flips entre `last_bounty_flip_id` et `last_flip_id` (en prenant en compte minimal_block_bounty) en one shot (et donc plusieurs rewards d’un coup).
+
+## PARTIE 2D: Administration du contrat
+
+On va créer un module `AdminModule` dans un nouveau fichier `admin.rs` dans le dossier `src`.
+
+Notez bien que nous lui “**indiquons l’existence**” de `StorageModule` (je vulgarise ne me tombez pas dessus lol)
+
+```rust
+use crate::storage;
+elrond_wasm::imports!();
+
+#[elrond_wasm::derive::module]
+pub trait AdminModule:// ContractBase +
+    storage::StorageModule
+{
+    
+}
+}
+```
+
+Et on ajoute ce module à notre contrat dans `lib.rs`
+
+```rust
+#![no_std]
+
+mod storage;
+mod admin;
+mod structs;
+
+elrond_wasm::imports!();
+
+#[elrond_wasm::derive::contract]
+pub trait FlipContract:// ContractBase +
+    storage::StorageModule + admin::AdminModule
+{
+    #[init]
+    fn init(&self) {}
+}
+```
+
+On se replace dans `AdminModule` puis on va tout d’abord créer un endpoint pour augmenter la réserve totale d’un token:
+
+```rust
+#[payable("*")]
+    #[endpoint(increaseReserve)]
+    fn increase_reserve(
+        &self,
+        #[payment_token] payment_token: TokenIdentifier<Self::Api>,
+        #[payment_nonce] payment_nonce: u64,
+        #[payment_amount] payment_amount: BigUint<Self::Api>
+    ) {
+
+        require!(
+            payment_amount > 0u64,
+            "zero payment"
+        );
+
+        self.token_reserve(
+            &payment_token,
+            payment_nonce
+        ).update(|reserve| *reserve += payment_amount);
+
+    }
+```
+
+Rien de fou mais notez qu’on ne sécurise pas cet endpoint par only_owner, si un utilisateur lambda veut gentillement nous donner de l’argent on accepte évidemment.
+
+On rajoute un endpoint pour récupérer la réserve de token non utilisée:
+
+```rust
+#[only_owner]
+#[endpoint(withdrawReserve)]
+fn withdraw_reserve(
+    &self,
+    token_identifier: TokenIdentifier<Self::Api>,
+    token_nonce: u64,
+    amount: BigUint<Self::Api>
+) {
+    let token_reserve = self.token_reserve(
+        &token_identifier,
+        token_nonce
+    ).get();
+
+    require!(
+        amount <= token_reserve,
+        "amount too high"
+    );
+
+    self.send()
+        .direct(
+            &self.blockchain().get_caller(),
+            &token_identifier,
+            token_nonce,
+            &amount,
+            &[]
+        );
+}
+```
+
+Cet endpoint est évidemment sécurisé `only_owner` (seul l’owner peut l’utiliser) et le require est important, sans ce dernier on pourrait rug avec l’argent des flip en cours.
+
+Dans ce monde faites confiance au code, pas aux humains.
+
+Ensuite on va rajouter 3 endpoints 
+- `only_owner` pour changer `maximum_bet`, 
+- `maximum_bet_percent`
+- `minimum_block_bounty`
+
+```rust
+#[only_owner]
+#[endpoint(setMaximumBetPercent)]
+fn set_maximum_bet_percent(
+    &self,
+    token_identifier: TokenIdentifier<Self::Api>,
+    token_nonce: u64,
+    percent: u64
+) {
+
+    require!(
+        percent > 0u64,
+        "percent zero"
+    );
+
+    self.maximum_bet_percent(
+        &token_identifier,
+        token_nonce
+    ).set(percent);
+
+}
+
+#[only_owner]
+#[endpoint(setMaximumBet)]
+fn set_maximum_bet(
+    &self,
+    token_identifier: TokenIdentifier<Self::Api>,
+    token_nonce: u64,
+    amount: BigUint<Self::Api>
+) {
+
+    require!(
+        amount > 0u64,
+        "amount zero"
+    );
+
+    self.maximum_bet(
+        &token_identifier,
+        token_nonce
+    ).set(amount);
+
+}
+
+#[only_owner]
+#[endpoint(setMinimumBlockBounty)]
+fn set_minimum_block_bounty(
+    &self,
+    minimum_block_bounty: u64
+) {
+
+    require!(
+        minimum_block_bounty > 0u64,
+        "minimum_block_bounty zero"
+    );
+
+    self.minimum_block_bounty().set(minimum_block_bounty);
+
+}
+```
+
+C’est tout pour la partie administration qui est relativement simple et courte.
+
+La prochaine étape va être de faire le code qui va gérer le flip et le bounty, ça va être un GROS morceau.
+
+
