@@ -11,7 +11,11 @@ Links to tutorial :
 
 # Tutoriel en français
 
-## INTRODUCTION : Créer une dApp de flip sur Elrond
+## SOMMAIRE
+
+- [INTRODUCTION : Créer une dApp de flip sur Elrond](#introduction)
+
+## <a name="introduction"></a>INTRODUCTION : Créer une dApp de flip sur Elrond
 
 L'application que l'on va développer ensemble est un flip : un "**quitte ou double**" où un joueur a une chance sur deux de doubler sa mise.
 
