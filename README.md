@@ -18,7 +18,11 @@ Links to tutorial :
 - [PARTIE 2B: Initialisation du projet](#partie2b)
 - [PARTIE 2C: Storage du contrat](#partie2c)
 - [PARTIE 2D: Administration du contrat](#partie2d)
-
+- [PARTIE 2E: Logique de la mise d’un joueur](#partie2e)
+- [PARTIE 2F: Résultat du flip](#partie2f)
+- [PARTIE 2G: Bounty](#partie2g)
+- [PARTIE 2H: Tests](#partie2h)
+- [PARTIE 2: Récapitulatif](#partie2_recap)
 
 ## <a name="introduction"></a>INTRODUCTION : Créer une dApp de flip sur Elrond
 
@@ -478,4 +482,466 @@ C’est tout pour la partie administration qui est relativement simple et courte
 
 La prochaine étape va être de faire le code qui va gérer le flip et le bounty, ça va être un GROS morceau.
 
+## <a name="partie2e"></a>PARTIE 2E: Logique de la mise d’un joueur
 
+Tout est prêt pour coder le coeur du contrat : **la logique de la mise d’un joueur**.
+
+On se place dans le fichier `lib.rs` (l’ancien `empty.rs` qu’on a renommé dans la partie 2b si vous vous rappelez) et on va y ajouter une constante `HUNDRED_PERCENT` qui représente l’échelle de nos % (cf partie 2b).
+
+```rust
+#![no_std]
+
+
+const HUNDRED_PERCENT: u64 = 100_000_000;
+
+mod storage;
+mod structs;
+mod admin;
+
+elrond_wasm::imports!();
+
+#[elrond_wasm::derive::contract]
+pub trait FlipContract:// ContractBase +
+    storage::StorageModule + admin::AdminModule
+{
+    #[init]
+    fn init(&self) {}
+}
+```
+
+On va se placer dans le trait `FlipContract` (et on va y rester qq temps) et on va remplacer la fonction d’initialisation du contrat:
+
+```rust
+#[init]
+fn init(
+    &self,
+    owner_percent_fees: u64,
+    bounty_percent_fees: u64,
+    minimum_block_bounty: u64
+) {
+    self.owner_percent_fees().set(owner_percent_fees);
+    self.bounty_percent_fees().set(bounty_percent_fees);
+
+    require!(
+        minimum_block_bounty > 0u64,
+        "minimum_block_bounty is zero"
+    );
+
+    self.minimum_block_bounty().set(minimum_block_bounty)
+}
+```
+
+La fonction annotée `#[init]` est une fonction qui va être appelée dans deux cas, au premier déploiement du contrat et à chaque mise à jour, dans cette fonction nous allons initialiser les valeurs d’administration.
+
+Nous allons maintenant nous attaquer à l’endpoint `flip` qui va permettre à un joueur de placer sa mise, on commencer par le déclarer:
+
+```rust
+#[payable("*")]
+#[endpoint]
+fn flip(
+    &self,
+    #[payment_amount] payment_amount: BigUint<Self::Api>,
+    #[payment_token] payment_token: TokenIdentifier<Self::Api>,
+    #[payment_nonce] payment_nonce: u64
+) {
+
+
+}
+```
+
+On se place maintenant à l’intérieur de l’endpoint `flip` (et on y restera jusqu’à nouvel ordre), on va commencer par faire quelques vérifications:
+
+```rust
+let token_reserve = self.token_reserve(
+    &payment_token,
+    payment_nonce
+).get();
+
+require!(
+    token_reserve > 0u64,
+    "no token reserve"
+);
+
+require!(
+    !self.maximum_bet(&payment_token, payment_nonce).is_empty(),
+    "no maximum bet"
+);
+
+require!(
+    !self.maximum_bet_percent(&payment_token, payment_nonce).is_empty(),
+    "no maximum bet percent"
+);
+```
+
+La première vérification consiste à vérifier que le contrat dispose bien de fonds pour effectuer un flip pour le token cible.
+
+cette vérification sera un échec si par exemple on a pas appelé `increaseReserve` dans notre fichier `admin.rs` (cf partie 2d) ou si le contrat n’a plus de liquidité suite à une série de victoires.
+
+Les deux vérifications suivantes vérifient que nous avons bien précisé les valeurs de mises maximales pour le token ciblé (cf parties 2c et 2d)
+
+On va maintenant vérifier que l’utilisateur n’a pas mis une mise trop importante par rapport à la liquidité que possède notre contrat (via `maximum_bet_percent`) ou la mise maximale que nous avons autorisée (via `maximum_bet`)
+
+On commence par calculer la mise maximale autorisée, on met à la suite du code précédent.
+
+```rust
+let maximum_bet = self.maximum_bet(
+    &payment_token,
+    payment_nonce
+).get();
+
+let maximum_bet_percent = self.maximum_bet_percent(
+    &payment_token,
+    payment_nonce
+).get();
+
+let max_allowed_bet = min(
+    maximum_bet,
+    token_reserve * &BigUint::from(maximum_bet_percent) / HUNDRED_PERCENT
+);
+```
+
+Si min est en rouge c’est que la fonction n’est pas importée, pour ce faire passez le curseur dessus et sélectionnez “Import”.
+
+Puis les mises qui iront à nous et au bounty via les frais, et la mise réelle du joueur (frais exclus), toujours à la suite du code précédent
+
+```rust
+let owner_profits = &payment_amount * &BigUint::from(self.owner_percent_fees().get()) / HUNDRED_PERCENT;
+let bounty = &payment_amount * &BigUint::from(self.bounty_percent_fees().get()) / HUNDRED_PERCENT;
+let amount = &payment_amount - &bounty - &owner_profits;
+```
+
+La première valeur ira directement à l’owner qq lignes plus tard (on y viendra), la deuxième valeur sera la récompense pour la personne qui va générer l’aléatoire  et la troisième valeur est la mise réelle du joueur (celle qui sera doublée en cas de victoire)
+
+On peut maintenant vérifier que la mise ne dépasse pas le maximum autorisé, encore à la suite du code précédent
+
+```rust
+require!(
+    amount <= max_allowed_bet,
+    "too much bet"
+);
+```
+
+A partir de maintenant toutes les vérifications sont faites, on a plus qu’à agir, on calcule tout d’abord le nouvel id de notre flip (qui vaut l’id du dernier flip + 1)
+
+```rust
+let last_flip_id = if self.last_flip_id().is_empty() {
+    0u64
+} else {
+    self.last_flip_id().get()
+};
+
+let flip_id = last_flip_id + 1;
+```
+
+Et on instancie les infos du flip
+
+```rust
+let flip = Flip {
+    id: flip_id,
+    player_address: self.blockchain().get_caller(),
+    token_identifier: payment_token.clone(),
+    token_nonce: payment_nonce,
+    amount: amount.clone(),
+    bounty: bounty.clone(),
+    block_nonce: self.blockchain().get_block_nonce(),
+    minimum_block_bounty: self.minimum_block_bounty().get()
+};
+```
+
+Si Flip est en rouge c’est qu’il n’est pas importé, pour ce faire passez le curseur dessus et sélectionnez “Import”
+
+On bloque le montant de la mise en retirant le montant de `token_reserve`:
+
+```rust
+self.token_reserve(
+    &payment_token,
+    payment_nonce
+).update(|reserve| *reserve -= &amount);
+```
+
+Et on s’envoie directement les frais du flip, on a pas besoin d’attendre que le flip soit effectué:
+
+```rust
+self.send()
+    .direct(
+        &self.blockchain().get_owner_address(),
+        &payment_token,
+        payment_nonce,
+        &owner_profits,
+        &[]
+    );
+```
+
+Tout s’est bien passé, plus qu’à inscrire dans le storage l’existence du flip:
+
+```rust
+self.flip_for_id(flip_id).set(flip); 
+self.last_flip_id().set(flip_id);
+```
+
+On a terminé l’endpoint “flip” ! A ce stade notre utilisateur peut placer sa mise et les frais sont calculés, la suite consiste à écrire le code qui permet de réaliser le flip.
+
+## <a name="partie2f"></a>PARTIE 2F : Résultat du flip
+
+Nous avons notre flip d’initialisé, nous allons dans cette partie le réaliser
+
+On se place dans le trait `FlipContract` (fichier `lib.rs`) et nous allons créer une fonction `make_flip`
+
+Cette partie sera donc consacré à l'écriture de cette fonction.
+
+```rust
+fn make_flip(
+    &self,
+    bounty_address: &ManagedAddress<Self::Api>,
+    flip: &Flip<Self::Api>
+) {
+    
+    }
+}
+```
+
+Cette fonction, qui n’est pas un endpoint, aura comme objectif de réaliser un flip en faisant trois actions :
+
+- Déterminer si le flip est gagnant ou perdant
+- Envoyer le gain au joueur en cas de victoire ou augmenter `token_reserve` en cas de défaite
+- Envoyer la récompense à celui qui génère l’aléatoire (`bounty_address`)
+
+On commence par déterminer si le flip est gagnant:
+
+```rust
+let mut rand_source = RandomnessSource::<Self::Api>::new();
+let random_number = rand_source.next_u8_in_range(0, 2);
+let is_win = random_number == 1u8;
+```
+
+Le code ci-dessus va générer un nombre aléatoire entre 0 et 2 (exclus) donc soit 0 soit 1, on considère que le flip est gagné si ce nombre vaut 1, on a donc bien une chance sur deux de gagner.
+
+On va maintenant gérer les transferts d’argent en fonction du résultat:
+
+```rust
+if is_win {
+    self.send()
+        .direct(
+            &flip.player_address,
+            &flip.token_identifier,
+            flip.token_nonce,
+            &profit_if_win,
+            &[]
+        );
+} else {
+    self.token_reserve(
+        &flip.token_identifier,
+        flip.token_nonce
+    )
+        .update(|reserve| *reserve += &profit_if_win);
+}
+```
+
+Dans le cas d’une défaite nous ajoutons le profit (= double du montant du flip) à la réserve, pourquoi le montant doublé et pas juste le montant ?
+
+Tout simplement car au moment où un joueur place sa mise (cf partie précédente), le smart contract reçoit dans sa balance le montant MAIS on ne l’ajoute pas à la réserve
+
+Mais non seulement on ajoute pas le montant à la réserve mais en + on le retire, il faut donc en cas de défaite ajouter à la réserve deux fois le montant
+
+Pour terminer on envoie le bounty à bounty_address (cf partie suivante où on créera l’endpoint qui appelle notre fonction `make_flip`)
+
+Et on enlève du storage le flip qui vient d’être réalisé:
+
+```rust
+self.send()
+    .direct(
+        &bounty_address,
+        &flip.token_identifier,
+        flip.token_nonce,
+        &flip.bounty,
+        &[]
+    );
+
+self.flip_for_id(flip.id).clear();
+```
+
+Voilà qui termine cette petite partie sur le résultat du flip, prochaine partie nous allons gérer le bounty.
+
+## <a name="partie2g"></a>PARTIE 2G : Bounty
+
+On sait maintenant comment réaliser le flip, il reste juste à créer l’endpoint associé
+
+Normalement il s’agit de l’avant dernier thread de la partie **smart contract** de cette longue série.
+
+On va rajouter un endpoint, toujours dans `FlipContract` dans le fichier `lib.rs`, qu’on va appeler `flip_bounty`
+
+```rust
+#[endpoint(flipBounty)]
+fn flip_bounty(
+    &self
+) {}
+    
+```
+
+Cette endpoint va être appelé par n’importe quelle adresse et aura comme objectif de :
+
+- réaliser tous les flips en attente d’un coup
+- donner le bounty de chaque flip à la personne qui a appelé l’endpoint
+
+On va commencer par interdire aux smarts contracts d’appeler cet endpoint afin de rendre la prédiction des nombres aléatoires plus difficile:
+
+```rust
+let caller = self.blockchain().get_caller();
+
+require!(
+    !self.blockchain().is_smart_contract(&caller),
+    "caller is a smart contract"
+);
+```
+
+On va ensuite récupérer l’id du dernier flip réalisé et l’id du dernier flip en attente.
+
+Par exemple si l’id du dernier flip réalisé est 3 et l’id du dernier flip en attente est 8 on va tenter de réaliser les flips 4, 5, 6, 7 et 8.
+
+Je dis tenter car supposons que les flips 7 et 8 ont été réalisés dans le même bloc que l’appel de `flip_bounty` on ne va PAS les réaliser, je vous renvoie à la partie 2A.
+
+On rajoute donc le code suivant:
+
+```rust
+let last_bounty_flip_id = self.last_bounty_flip_id().get();
+let last_flip_id = self.last_flip_id().get();
+
+require!(
+    last_bounty_flip_id < last_flip_id,
+    "last bounty flip id >= last flip id"
+);
+```
+
+On va initialiser l’itération sur tous les flips potentiels à réaliser:
+
+```rust
+let current_block_nonce = self.blockchain().get_block_nonce();
+
+let mut bounty_flip_id = last_bounty_flip_id;
+
+while bounty_flip_id < last_flip_id {
+    
+    // On va ecrire du code ici
+
+    bounty_flip_id += 1u64;
+}
+```
+
+A chaque itération on va :
+
+- Récupérer les infos du flip
+- Vérifier si le flip est sur un bloc antérieur au bloc actuel
+- Réaliser le flip (via `make_flip` du thread précédent)
+
+
+J’attire rapidement votre attention sur le deuxième point, si on doit réaliser les flips 5 à 30 et que le flip 10 est sur le même bloc que le bloc courant, alors les flips 11 à 30 aussi
+
+On pourra donc casser la boucle immédiatement
+
+Voilà à quoi ressemble notre boucle maintenant:
+
+```rust
+while bounty_flip_id < last_flip_id {
+    let flip_id = bounty_flip_id + 1u64;
+
+    if self.flip_for_id(flip_id).is_empty() {
+        break;
+    }
+
+    let flip = self.flip_for_id(flip_id).get();
+
+    if current_block_nonce < flip.block_nonce + flip.minimum_block_bounty {
+        break;
+    }
+
+    self.make_flip(
+        &caller,
+        &flip
+    );
+
+    bounty_flip_id += 1u64;
+}
+```
+
+On sort de notre boucle et il nous reste que deux choses à faire :
+
+- Renvoyer une erreur si aucun flip n’a pu être réalisé
+- Enregistrer le dernier flip réalisé dans le storage
+
+On rajoute donc après la boucle les deux lignes suivantes:
+
+```rust
+if bounty_flip_id == last_bounty_flip_id {
+    sc_panic!("no bounty")
+}
+
+self.last_bounty_flip_id().set(bounty_flip_id);
+```
+
+Voilà qui termine ce thread et le code du smart contract, il nous reste une dernière chose à voir : les tests.
+
+
+## <a name="partie2h"></a>PARTIE 2H : Tests
+
+Le code du contrat est terminé, on va se poser tranquillement et parler un peu de tests
+
+Jusqu’à présent on a codé mais on a jamais vérifié si le contrat fonctionnait, nous n’avons pas non plus déployé le contrat donc à l’heure actuelle nous avons un contrat qui compile mais qui pourrait très bien faire des conneries
+
+Il faut donc maintenant s’assurer que le contrat fait bien ce qu’on attend de lui, même dans des conditions particulières
+
+On a donc plusieurs façon de procéder, tout d’abord la méthode naïve qui consiste à déployer le contrat sur un testnet et de tester à la main de faire des flips, des bounty, des increaseReserve en tant qu’owner, increaseReserve sans être owner pour check qu’il y a une erreur, ..
+
+Avantages :
+
+- On peut vérifier si ça fonctionne
+
+Désavantages :
+
+- C’est long
+- C’est chiant
+- C’est risqué car erreurs de manip qui peuvent fausser les tests
+- Il faut tout refaire à chaque modification du code pour vérifier qu’on a rien cassé
+
+
+- On maîtrise que dalle (entre deux tests le testnet aura changé)
+- On ne peut pas jouer sur la temporalité (perso attendre plusieurs blocs après une mise pour tester le bounty non merci)
+
+Conclusion : oubliez cette façon de faire
+
+Ensuite on a la méthode “naïve mais y a de l’idée” qui consiste à écrire un script qui va déployer et faire tous les tests
+
+C’est comme la méthode naïve mais automatisée, globalement on a le même unique avantage et les mêmes désavantages sauf les erreurs de manip
+
+Vient donc la bonne méthode : faire des tests dans un environnement maîtrisé via un framwork
+
+On a sur Elrond deux frameworks de tests : [Mandos](https://docs.elrond.com/developers/mandos-reference/overview/) ou [Rust Testing Framework](https://doc.rust-lang.org/rust-by-example/testing/unit_testing.html)
+
+Le concept est simple : une blockchain va être simulée en local et les tests vont être lancés dans cet environnement qui sera TOUJOURS le même
+
+On peut agir sur le storage, faire des avances rapides dans le temps, modifier les balances des adresses, etc…
+
+Je vais personnellement utiliser mandos, préférence personnelle, les deux frameworks font la même chose en bout de chaîne donc il n’y a pas de mauvais choix
+
+Je ne vais pas vous mettre le code des tests il sera disponible dans le thread suivant où je publierai tout le code du contrat
+
+Je vais plutôt faire une liste non exhaustif des tests que j’ai réalisé afin que vous ayez une idée :
+
+- Mise d’un joueur
+- Bounty d’un flip gagnant
+- Bounty d’un flip perdant
+- Mise de plusieurs personnes sur des blocs différents
+- Bounty de plusieurs flips dont certains sur le même bloc que le bloc courant
+
+A titre personnel les tests représentent 70% de mon temps et 30% c’est coder le smart contract.
+
+## <a name="partie2_recap"></a>PARTIE 2 : Récapitulatif
+
+On a fini la partie smart contract du flip
+
+On a un contrat de flip fonctionnel qui possède une petite sécurité contre les attaques sur les nombres aléatoires.
+
+Cette sécurité consiste en bref à payer des utilisateurs autres que les joueurs pour nous fournir l'aléatoire, pour que ça fonctionne il faut donc un minimum de trafic.
+
+Notre flip peut se faire sur n'importe quel token du moment que le contrat possède une réserve de ce token, la mise maximale dépend de cette réserve
+
+La suite consiste à créer le site web qui va se connecter au contrat, on pourra aussi regarder pour créer un script de déploiement automatisé du contrat.
