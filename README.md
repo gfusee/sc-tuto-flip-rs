@@ -98,7 +98,7 @@ On va résoudre ce problème en faisant le flip en deux transactions, la premiè
 Mais petite subtilité, n'importe qui pourra faire la deuxième transaction qui générera l'aléatoire du flip
 Pour inciter d'autres utilisateurs (joueur ou non) à faire cette transaction on va les rémunérer avec % de la mise!
 
-En clair si joueur A place 1 EGLD au bloc N, dès le bloc N-1 un utilisateur B pourra générer son flip et touchera un % de la mise de 1 EGLD
+En clair si joueur A place 1 EGLD au bloc N, dès le bloc N+1 un utilisateur B pourra générer son flip et touchera un % de la mise de 1 EGLD
 Évidemment premier arrivé premier servi afin de ne pas laisser le temps de tester sur une blockchain clonée.
 
 ## <a name="partie2b"></a>PARTIE 2B: Initialisation du projet
@@ -117,7 +117,7 @@ Ensuite dans notre fichier `lib.rs`, on va renommer le **EmptyContract** en **Fl
 
 Maintenant on va changer la version du compilateur Elrond, on va se fixer une version afin que personne ne soit perdu, imaginez si quelqu’un lit ce thread dans 3 mois et que des mises à jour du framework ont changé la façon de coder cette personne sera complètement perdue.
 
-J’ai choisi la version `0.30.0.` car c’est la version la plus à jour au moment où je code ce contrat
+J’ai choisi la version `0.30.0` car c’est la version la plus à jour au moment où je code ce contrat
 
 Petit update de dernière minute: la version `0.31.1` est sortie, on ne va pas l’utiliser pour ce thread mais je vous encourage évidemment à l’utiliser dans vos projets.
 
@@ -175,7 +175,7 @@ mod storage;
 elrond_wasm::imports!();
 
 #[elrond_wasm::derive::contract]
-pub trait FlipContract:// ContractBase +
+pub trait FlipContract:
     storage::StorageModule
 {
     #[init]
@@ -288,7 +288,7 @@ Intuitivement, `token_reserve = balance - token bloqués`
 Et pour finir on va rajouter 3 variables concernant notre flip :
 
 ```rust
-#[view(flipForId)]
+#[view(getFlipForId)]
 #[storage_mapper("flip_for_id")]
 fn flip_for_id(&self, id: u64) -> SingleValueMapper<Self::Api, Flip<Self::Api>>;
 
@@ -322,11 +322,10 @@ use crate::storage;
 elrond_wasm::imports!();
 
 #[elrond_wasm::derive::module]
-pub trait AdminModule:// ContractBase +
+pub trait AdminModule:
     storage::StorageModule
 {
     
-}
 }
 ```
 
@@ -342,7 +341,7 @@ mod structs;
 elrond_wasm::imports!();
 
 #[elrond_wasm::derive::contract]
-pub trait FlipContract:// ContractBase +
+pub trait FlipContract:
     storage::StorageModule + admin::AdminModule
 {
     #[init]
@@ -354,25 +353,25 @@ On se replace dans `AdminModule` puis on va tout d’abord créer un endpoint po
 
 ```rust
 #[payable("*")]
-    #[endpoint(increaseReserve)]
-    fn increase_reserve(
-        &self,
-        #[payment_token] payment_token: TokenIdentifier<Self::Api>,
-        #[payment_nonce] payment_nonce: u64,
-        #[payment_amount] payment_amount: BigUint<Self::Api>
-    ) {
+#[endpoint(increaseReserve)]
+fn increase_reserve(
+    &self,
+    #[payment_token] payment_token: TokenIdentifier<Self::Api>,
+    #[payment_nonce] payment_nonce: u64,
+    #[payment_amount] payment_amount: BigUint<Self::Api>
+) {
 
-        require!(
-            payment_amount > 0u64,
-            "zero payment"
-        );
+    require!(
+        payment_amount > 0u64,
+        "zero payment"
+    );
 
-        self.token_reserve(
-            &payment_token,
-            payment_nonce
-        ).update(|reserve| *reserve += payment_amount);
+    self.token_reserve(
+        &payment_token,
+        payment_nonce
+    ).update(|reserve| *reserve += payment_amount);
 
-    }
+}
 ```
 
 Rien de fou mais notez qu’on ne sécurise pas cet endpoint par only_owner, si un utilisateur lambda veut gentillement nous donner de l’argent on accepte évidemment.
@@ -694,10 +693,7 @@ fn make_flip(
     &self,
     bounty_address: &ManagedAddress<Self::Api>,
     flip: &Flip<Self::Api>
-) {
-    
-    }
-}
+) { }
 ```
 
 Cette fonction, qui n’est pas un endpoint, aura comme objectif de réaliser un flip en faisant trois actions :
@@ -775,7 +771,6 @@ On va rajouter un endpoint, toujours dans `FlipContract` dans le fichier `lib.rs
 fn flip_bounty(
     &self
 ) {}
-    
 ```
 
 Cette endpoint va être appelé par n’importe quelle adresse et aura comme objectif de :
@@ -821,7 +816,7 @@ let mut bounty_flip_id = last_bounty_flip_id;
 
 while bounty_flip_id < last_flip_id {
     
-    // On va ecrire du code ici
+    // On va écrire du code ici
 
     bounty_flip_id += 1u64;
 }
@@ -832,7 +827,6 @@ A chaque itération on va :
 - Récupérer les infos du flip
 - Vérifier si le flip est sur un bloc antérieur au bloc actuel
 - Réaliser le flip (via `make_flip` du thread précédent)
-
 
 J’attire rapidement votre attention sur le deuxième point, si on doit réaliser les flips 5 à 30 et que le flip 10 est sur le même bloc que le bloc courant, alors les flips 11 à 30 aussi
 
@@ -880,14 +874,13 @@ self.last_bounty_flip_id().set(bounty_flip_id);
 
 Voilà qui termine ce thread et le code du smart contract, il nous reste une dernière chose à voir : les tests.
 
-
 ## <a name="partie2h"></a>PARTIE 2H : Tests
 
 Le code du contrat est terminé, on va se poser tranquillement et parler un peu de tests
 
 Jusqu’à présent on a codé mais on a jamais vérifié si le contrat fonctionnait, nous n’avons pas non plus déployé le contrat donc à l’heure actuelle nous avons un contrat qui compile mais qui pourrait très bien faire des conneries
 
-Il faut donc maintenant s’assurer que le contrat fait bien ce qu’on attend de lui, même dans des conditions particulières
+Il faut donc maintenant s’assurer que le contrat fait bien ce qu’on attend de lui, même dans des conditions particulières.
 
 On a donc plusieurs façon de procéder, tout d’abord la méthode naïve qui consiste à déployer le contrat sur un testnet et de tester à la main de faire des flips, des bounty, des increaseReserve en tant qu’owner, increaseReserve sans être owner pour check qu’il y a une erreur, ..
 
@@ -901,8 +894,6 @@ Désavantages :
 - C’est chiant
 - C’est risqué car erreurs de manip qui peuvent fausser les tests
 - Il faut tout refaire à chaque modification du code pour vérifier qu’on a rien cassé
-
-
 - On maîtrise que dalle (entre deux tests le testnet aura changé)
 - On ne peut pas jouer sur la temporalité (perso attendre plusieurs blocs après une mise pour tester le bounty non merci)
 
