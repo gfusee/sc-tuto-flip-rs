@@ -26,6 +26,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d468802bab17cbc0cc575e9b053f41e72aa36bfa6b7f55e3529ffa43161b97fa"
 
 [[package]]
+name = "bech32"
+version = "0.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d86b93f97252c47b41663388e6d155714a9d0c398b99f1005cbc5f978b29f445"
+
+[[package]]
 name = "bitflags"
 version = "1.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -52,17 +58,6 @@ name = "byteorder"
 version = "1.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "14c189c53d098945499cdfa7ecc63567cf3886b3332b312a5b4585d8d3a6a610"
-
-[[package]]
-name = "cargo_toml"
-version = "0.10.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "363c7cfaa15f101415c4ac9e68706ca4a2277773932828b33f96e59d28c68e62"
-dependencies = [
- "serde",
- "serde_derive",
- "toml",
-]
 
 [[package]]
 name = "cfg-if"
@@ -131,21 +126,28 @@ dependencies = [
 ]
 
 [[package]]
-name = "elrond-codec"
-version = "0.10.0"
+name = "either"
+version = "1.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ac047da77d8431b7c6a0cb39c9ecf2f308d917a256425054c1d6e3d59af17ce6"
+checksum = "90e5c1c8368803113bf0c9584fc495a58b86dc8a29edbf8fe877d21d9507e797"
+
+[[package]]
+name = "elrond-codec"
+version = "0.16.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "464f138aad7a8f8605ee709793863989b46d050f444bf65c4dc9f4bb481e1425"
 dependencies = [
  "arrayvec",
  "elrond-codec-derive",
+ "num-bigint",
  "wee_alloc",
 ]
 
 [[package]]
 name = "elrond-codec-derive"
-version = "0.10.0"
+version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0c48683e768c68dd63b723e0c3ea0281464b084f1acbad1abd185097dba2b940"
+checksum = "307ece5b7a6347c517a02f7c3d6fc40d516bbc2d5b2fe0468a1cb2bb4b36403e"
 dependencies = [
  "hex",
  "proc-macro2",
@@ -155,28 +157,30 @@ dependencies = [
 
 [[package]]
 name = "elrond-wasm"
-version = "0.30.0"
+version = "0.38.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2d02546d3d354aeb7dba4c1914efcd52fbaa8dfd28bd2389c086d126486795a7"
+checksum = "ce51a244a7dffb88af6426fbdf38d037750053e07269fec32f0b99b56c45f0ac"
 dependencies = [
  "bitflags",
  "elrond-codec",
  "elrond-wasm-derive",
- "hashbrown",
+ "hashbrown 0.11.2",
  "hex-literal",
+ "num-traits",
  "wee_alloc",
 ]
 
 [[package]]
 name = "elrond-wasm-debug"
-version = "0.30.0"
+version = "0.38.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "15eae33dbb58694fe7aaeecee400f61225d6ed055d1493418376516117c7cb3b"
+checksum = "864a9a59b8f85a2ad2d230985d68de326bd5ab360f3b39c21a34e0fba8224a65"
 dependencies = [
- "cargo_toml",
+ "bech32",
  "ed25519-dalek",
  "elrond-wasm",
  "hex",
+ "itertools",
  "mandos",
  "num-bigint",
  "num-traits",
@@ -194,9 +198,9 @@ dependencies = [
 
 [[package]]
 name = "elrond-wasm-derive"
-version = "0.30.0"
+version = "0.38.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7a0bbf46f0661503e41a55dca2cd216a0596612703b34c5d48e5da35b88bdec9"
+checksum = "5b597e6a65aa96fdb2d6ed46c9d9fd1c224b857f4933022f89ab5ef5ada4f2ed"
 dependencies = [
  "hex",
  "proc-macro2",
@@ -262,6 +266,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "hashbrown"
+version = "0.12.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8a9ee70c43aaf417c914396645a0fa852624801b24ebb7ae78fe8272889ac888"
+
+[[package]]
 name = "hex"
 version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -272,6 +282,25 @@ name = "hex-literal"
 version = "0.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7ebdb29d2ea9ed0083cd8cece49bbd968021bd99b0849edb4a9a7ee0fdf6a4e0"
+
+[[package]]
+name = "indexmap"
+version = "1.9.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1885e79c1fc4b10f0e172c475f458b7f7b93061064d98c3293e98c5ba0c8b399"
+dependencies = [
+ "autocfg",
+ "hashbrown 0.12.3",
+]
+
+[[package]]
+name = "itertools"
+version = "0.10.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b0fd2260e829bddf4cb6ea802289de2f86d6a7a690192fbe91b3f46e0f2c8473"
+dependencies = [
+ "either",
+]
 
 [[package]]
 name = "itoa"
@@ -293,10 +322,11 @@ checksum = "21a41fed9d98f27ab1c6d161da622a4fa35e8a54a8adc24bbf3ddd0ef70b0e50"
 
 [[package]]
 name = "mandos"
-version = "0.12.0"
+version = "0.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d900ececaf3c154e5458df685766c711ad7cb97d4c49648c2ad3c7386d14aa2f"
+checksum = "57cfadc5266c179dee0b5fd1aeba0934771af5ef250b278691b7944c261e7454"
 dependencies = [
+ "bech32",
  "hex",
  "num-bigint",
  "num-traits",
@@ -606,6 +636,7 @@ version = "0.5.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8d82e1a7758622a465f8cee077614c73484dac5b836c02ff6a40d5d1010324d7"
 dependencies = [
+ "indexmap",
  "serde",
 ]
 

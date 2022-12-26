@@ -1,13 +1,14 @@
 use flip::storage::StorageModule;
 use flip::admin::AdminModule;
 use elrond_wasm::types::Address;
-use elrond_wasm_debug::{rust_biguint, testing_framework::*, DebugApi, managed_biguint, managed_token_id};
+use elrond_wasm_debug::{rust_biguint, testing_framework::*, DebugApi, managed_biguint, managed_token_id, managed_egld_token_id, managed_token_id_wrapped};
 use flip::*;
 
 pub type RustBigUint = num_bigint::BigUint;
 
 const WASM_PATH: &'static str = "output/flip.wasm";
 const OWNER_BALANCE: u64 = 10_000_000_000_000_000_000;
+const TOKEN_ID: &[u8] = b"CROWD-123456";
 
 struct FlipContractSetup<FlipContractObjBuilder>
 where
@@ -37,6 +38,8 @@ where
         cf_builder,
         WASM_PATH,
     );
+
+    blockchain_wrapper.set_esdt_balance(&owner_address,&TOKEN_ID,&rust_biguint!(1000));
 
 
     blockchain_wrapper
@@ -80,23 +83,21 @@ fn increase_withdraw_reserve_test(){
 
     setup
         .blockchain_wrapper
-        .execute_tx(
+        .execute_esdt_transfer(
             &setup.owner_address,
             &setup.contract_wrapper,
+            &TOKEN_ID,
+            0,
             &rust_biguint!(100),
             |sc|{
-                sc.increase_reserve(
-                    managed_token_id!(b"EGLD-123456"),
-                    0,
-                    managed_biguint!(100)
-                );
+                sc.increase_reserve();
             }
         ).assert_ok();
 
     setup
         .blockchain_wrapper
         .execute_query(&setup.contract_wrapper,|sc|{
-            let actual_reserve= sc.token_reserve(&managed_token_id!(b"EGLD-123456"),0).get();
+            let actual_reserve= sc.token_reserve(&managed_token_id_wrapped!(TOKEN_ID),0).get();
             let expected_reserve = managed_biguint!(100);
 
             assert_eq!(actual_reserve,expected_reserve);
@@ -106,7 +107,8 @@ fn increase_withdraw_reserve_test(){
 
         }).assert_ok();
 
-    setup.blockchain_wrapper.check_egld_balance(setup.contract_wrapper.address_ref(),&rust_biguint!(100));
+    setup.blockchain_wrapper.check_egld_balance(setup.contract_wrapper.address_ref(),&rust_biguint!(0));
+    setup.blockchain_wrapper.check_esdt_balance(setup.contract_wrapper.address_ref(),TOKEN_ID,&rust_biguint!(100));
 
 
     setup
@@ -117,7 +119,7 @@ fn increase_withdraw_reserve_test(){
             &rust_biguint!(0),
             |sc|{
                 sc.withdraw_reserve(
-                    managed_token_id!(b"EGLD-123456"),
+                    managed_token_id_wrapped!(TOKEN_ID),
                     0,
                     managed_biguint!(100)
 

@@ -5,7 +5,7 @@ elrond_wasm::derive_imports!();
 pub struct Flip<M : ManagedTypeApi> {
     pub id: u64,
     pub player_address: ManagedAddress<M>,
-    pub token_identifier: TokenIdentifier<M>,
+    pub token_identifier: EgldOrEsdtTokenIdentifier<M>,
     pub token_nonce: u64,
     pub amount: BigUint<M>,
     pub bounty: BigUint<M>,
