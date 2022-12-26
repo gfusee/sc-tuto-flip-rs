@@ -2,7 +2,7 @@ use crate::storage;
 elrond_wasm::imports!();
 
 #[elrond_wasm::derive::module]
-pub trait AdminModule:// ContractBase +
+pub trait AdminModule:ContractBase +
     storage::StorageModule
 {
 
@@ -44,14 +44,17 @@ pub trait AdminModule:// ContractBase +
             amount <= token_reserve,
             "amount too high"
         );
+        let payment = amount;
+        let nonce = token_nonce;
 
         self.send()
             .direct(
                 &self.blockchain().get_caller(),
                 &token_identifier,
-                token_nonce,
-                &amount,
+                0,
+                &payment,
                 &[]
+
             );
     }
 

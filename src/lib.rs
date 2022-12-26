@@ -13,7 +13,7 @@ elrond_wasm::imports!();
 elrond_wasm::derive_imports!();
 
 #[elrond_wasm::derive::contract]
-pub trait FlipContract:// ContractBase +
+pub trait FlipContract: //ContractBase +
     storage::StorageModule + admin::AdminModule
 {
 
