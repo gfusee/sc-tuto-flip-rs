@@ -39,11 +39,11 @@ pub trait FlipContract: ContractBase +
     #[endpoint(flip)]
     fn flip(
         &self) {
-        let (token_id, payment_nonce,payment_amount ) = self.call_value().egld_or_single_esdt().into_tuple();
+        let (token_id, nonce,payment_amount ) = self.call_value().egld_or_single_esdt().into_tuple();
 
         let token_reserve = self.token_reserve(
             &token_id,
-            payment_nonce
+            nonce
         ).get();
 
         require!(
@@ -52,23 +52,23 @@ pub trait FlipContract: ContractBase +
         );
 
         require!(
-            !self.maximum_bet(&token_id, payment_nonce).is_empty(),
+            !self.maximum_bet(&token_id, nonce).is_empty(),
             "no maximum bet"
         );
 
         require!(
-            !self.maximum_bet_percent(&token_id, payment_nonce).is_empty(),
+            !self.maximum_bet_percent(&token_id, nonce).is_empty(),
             "no maximum bet percent"
         );
 
         let maximum_bet = self.maximum_bet(
             &token_id,
-            payment_nonce
+            nonce
         ).get();
 
         let maximum_bet_percent = self.maximum_bet_percent(
             &token_id,
-            payment_nonce
+            nonce
         ).get();
 
         let max_allowed_bet = min(
@@ -97,7 +97,7 @@ pub trait FlipContract: ContractBase +
             id: flip_id,
             player_address: self.blockchain().get_caller(),
             token_identifier: token_id.clone(),
-            token_nonce: payment_nonce,
+            token_nonce: nonce,
             amount: amount.clone(),
             bounty: bounty.clone(),
             block_nonce: self.blockchain().get_block_nonce(),
@@ -106,7 +106,7 @@ pub trait FlipContract: ContractBase +
 
         self.token_reserve(
             &token_id,
-            payment_nonce
+            nonce
         ).update(|reserve| *reserve -= &amount);
 
         self.send().direct(

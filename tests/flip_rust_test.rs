@@ -9,7 +9,9 @@ pub type RustBigUint = num_bigint::BigUint;
 
 const WASM_PATH: &'static str = "output/flip.wasm";
 const OWNER_BALANCE: u64 = 10_000_000_000_000_000_000;
+const ONE_EGLD: u64 = 1_000_000_000_000_000_000;
 const TOKEN_ID: &[u8] = b"FLIP-123456";
+const TWENTY_PERCENT: u64 = 20_000_000;
 
 struct FlipContractSetup<FlipContractObjBuilder>
 where
@@ -209,9 +211,99 @@ fn increase_withdraw_reserve_test(){
 
     setup.blockchain_wrapper.check_egld_balance(setup.contract_wrapper.address_ref(),&rust_biguint!(0));
     setup.blockchain_wrapper.check_esdt_balance(setup.contract_wrapper.address_ref(),TOKEN_ID,&rust_biguint!(0));
-
-
-
 }
+
+    #[test]
+    fn set_maximum_bet_percent_test(){
+        let mut setup = setup_flip(flip::contract_obj);
+
+        setup
+            .blockchain_wrapper
+            .execute_tx(
+                &setup.owner_address,
+                &setup.contract_wrapper,
+                &rust_biguint!(0),
+                |sc|{
+                    sc.set_maximum_bet_percent(
+                        managed_token_id_wrapped!(TOKEN_ID),
+                        0,
+                        TWENTY_PERCENT
+                    )
+                }
+
+            ).assert_ok();
+
+        setup
+            .blockchain_wrapper
+            .execute_query(
+                &setup.contract_wrapper,|sc|{
+                    let maximum_bet_percent = sc.maximum_bet_percent(&managed_token_id_wrapped!(TOKEN_ID),0).get();
+                    let expected = TWENTY_PERCENT;
+
+                    assert_eq!(maximum_bet_percent,expected)
+                }
+            ).assert_ok()
+    }
+
+    #[test]
+    fn set_maximum_bet_test(){
+        let mut setup = setup_flip(flip::contract_obj);
+
+        setup
+            .blockchain_wrapper
+            .execute_tx(
+                &setup.owner_address,
+                &setup.contract_wrapper,
+                &rust_biguint!(0),
+                |sc|{
+                    sc.set_maximum_bet(
+                        managed_token_id_wrapped!(TOKEN_ID),
+                        0,
+                        managed_biguint!(10)
+                    )
+                }
+            ).assert_ok();
+
+        setup
+            .blockchain_wrapper
+            .execute_query(
+                &setup.contract_wrapper,|sc|{
+                    let maximum_bet = sc.maximum_bet(&managed_token_id_wrapped!(TOKEN_ID),0).get();
+                    let expected = managed_biguint!(10);
+
+                    assert_eq!(maximum_bet,expected)
+                }
+            ).assert_ok()
+    }
+
+    #[test]
+    fn set_minimum_block_bounty(){
+        let mut setup = setup_flip(flip::contract_obj);
+
+        setup
+            .blockchain_wrapper
+            .execute_tx(
+                &setup.owner_address,
+                &setup.contract_wrapper,
+                &rust_biguint!(0),
+                |sc|{
+                    sc.set_minimum_block_bounty(2u64)
+                }
+            ).assert_ok();
+
+        setup
+            .blockchain_wrapper
+            .execute_query(
+                &setup.contract_wrapper,|sc|{
+                    let minimum_block_bounty = sc.minimum_block_bounty().get();
+                    let expected = 2u64;
+
+                    assert_eq!(minimum_block_bounty,expected)
+                }
+            ).assert_ok()
+
+    }
+
+
 
 
