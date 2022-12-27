@@ -33,24 +33,30 @@ pub trait AdminModule:ContractBase +
         &self,
         token_identifier: EgldOrEsdtTokenIdentifier<Self::Api>,
         token_nonce: u64,
-        amount: BigUint<Self::Api>
+        amount: OptionalValue<BigUint<Self::Api>>
     ) {
-        let token_reserve = self.token_reserve(
+        let reserve_mapper = self.token_reserve(&token_identifier,token_nonce).get();
+        let withdraw_amount = match amount {
+            OptionalValue::Some(amt)=>amt,
+            OptionalValue::None => reserve_mapper
+        };
+
+        self.token_reserve(
             &token_identifier,
             token_nonce
-        ).get();
+        ).update(|reserve|{
+            require!(withdraw_amount > 0 && withdraw_amount <= *reserve,
+            "Invalid withdraw amount");
 
-        require!(
-            amount <= token_reserve,
-            "amount too high"
-        );
+            *reserve -= &withdraw_amount;
+        });
 
         self.send()
             .direct(
                 &self.blockchain().get_caller(),
                 &token_identifier,
                 0,
-                &token_reserve);
+                &withdraw_amount);
     }
 
     #[only_owner]

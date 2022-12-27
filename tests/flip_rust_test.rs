@@ -1,3 +1,4 @@
+use elrond_wasm::elrond_codec::multi_types::OptionalValue;
 use flip::storage::StorageModule;
 use flip::admin::AdminModule;
 use elrond_wasm::types::Address;
@@ -8,7 +9,7 @@ pub type RustBigUint = num_bigint::BigUint;
 
 const WASM_PATH: &'static str = "output/flip.wasm";
 const OWNER_BALANCE: u64 = 10_000_000_000_000_000_000;
-const TOKEN_ID: &[u8] = b"CROWD-123456";
+const TOKEN_ID: &[u8] = b"FLIP-123456";
 
 struct FlipContractSetup<FlipContractObjBuilder>
 where
@@ -81,6 +82,7 @@ fn deploy_test() {
 fn increase_withdraw_reserve_test(){
     let mut setup = setup_flip(flip::contract_obj);
 
+    //stake ESDT
     setup
         .blockchain_wrapper
         .execute_esdt_transfer(
@@ -94,6 +96,7 @@ fn increase_withdraw_reserve_test(){
             }
         ).assert_ok();
 
+    //check reserve and balance
     setup
         .blockchain_wrapper
         .execute_query(&setup.contract_wrapper,|sc|{
@@ -110,7 +113,7 @@ fn increase_withdraw_reserve_test(){
     setup.blockchain_wrapper.check_egld_balance(setup.contract_wrapper.address_ref(),&rust_biguint!(0));
     setup.blockchain_wrapper.check_esdt_balance(setup.contract_wrapper.address_ref(),TOKEN_ID,&rust_biguint!(100));
 
-
+    //Withdraw ESDT
     setup
         .blockchain_wrapper
         .execute_tx(
@@ -121,11 +124,93 @@ fn increase_withdraw_reserve_test(){
                 sc.withdraw_reserve(
                     managed_token_id_wrapped!(TOKEN_ID),
                     0,
-                    managed_biguint!(100)
+                    OptionalValue::Some(managed_biguint!(100))
 
                 )
             }
-        ).assert_ok()
+        ).assert_ok();
+
+    //check reserve and balance
+    setup
+        .blockchain_wrapper
+        .execute_query(&setup.contract_wrapper,|sc|{
+            let actual_reserve= sc.token_reserve(&managed_token_id_wrapped!(TOKEN_ID),0).get();
+            let expected_reserve = managed_biguint!(0);
+
+            assert_eq!(actual_reserve,expected_reserve);
+
+            println!("{:?}", actual_reserve);
+            println!("{:?}", expected_reserve)
+
+        }).assert_ok();
+
+    setup.blockchain_wrapper.check_egld_balance(setup.contract_wrapper.address_ref(),&rust_biguint!(0));
+    setup.blockchain_wrapper.check_esdt_balance(setup.contract_wrapper.address_ref(),TOKEN_ID,&rust_biguint!(0));
+
+    //Stake EGLD
+    setup
+        .blockchain_wrapper
+        .execute_tx(
+            &setup.owner_address,
+            &setup.contract_wrapper,
+            &rust_biguint!(100),
+            |sc|{
+                sc.increase_reserve();
+            }
+        ).assert_ok();
+
+    //check reserve and balance EGLD
+    setup
+        .blockchain_wrapper
+        .execute_query(&setup.contract_wrapper,|sc|{
+            let actual_reserve= sc.token_reserve(&managed_egld_token_id!(),0).get();
+            let expected_reserve = managed_biguint!(100);
+
+            assert_eq!(actual_reserve,expected_reserve);
+
+            println!("{:?}", actual_reserve);
+            println!("{:?}", expected_reserve)
+
+        }).assert_ok();
+
+    setup.blockchain_wrapper.check_egld_balance(setup.contract_wrapper.address_ref(),&rust_biguint!(100));
+    setup.blockchain_wrapper.check_esdt_balance(setup.contract_wrapper.address_ref(),TOKEN_ID,&rust_biguint!(0));
+
+    //Withdraw EGLD
+    setup
+        .blockchain_wrapper
+        .execute_tx(
+            &setup.owner_address,
+            &setup.contract_wrapper,
+            &rust_biguint!(0),
+            |sc|{
+                sc.withdraw_reserve(
+                    managed_egld_token_id!(),
+                    0,
+                    OptionalValue::Some(managed_biguint!(100))
+
+                )
+            }
+        ).assert_ok();
+
+    //check reserve and balance EGLD
+    setup
+        .blockchain_wrapper
+        .execute_query(&setup.contract_wrapper,|sc|{
+            let actual_reserve= sc.token_reserve(&managed_egld_token_id!(),0).get();
+            let expected_reserve = managed_biguint!(0);
+
+            assert_eq!(actual_reserve,expected_reserve);
+
+            println!("{:?}", actual_reserve);
+            println!("{:?}", expected_reserve)
+
+        }).assert_ok();
+
+    setup.blockchain_wrapper.check_egld_balance(setup.contract_wrapper.address_ref(),&rust_biguint!(0));
+    setup.blockchain_wrapper.check_esdt_balance(setup.contract_wrapper.address_ref(),TOKEN_ID,&rust_biguint!(0));
+
+
 
 }
 
