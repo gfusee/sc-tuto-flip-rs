@@ -6,7 +6,7 @@ use crate::structs::Flip;
 const HUNDRED_PERCENT: u64 = 100_000_000;
 
 pub mod storage;
-mod structs;
+pub mod structs;
 pub mod admin;
 
 elrond_wasm::imports!();
