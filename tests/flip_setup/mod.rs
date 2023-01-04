@@ -9,7 +9,7 @@ pub type RustBigUint = num_bigint::BigUint;
 
 const WASM_PATH: &'static str = "output/flip.wasm";
 pub const EGLD_TOKEN_ID: &[u8] = b"EGLD";
-const OWNER_BALANCE: u64 = 1100;// 1100 because of 100 for increase reserve = 100
+const OWNER_BALANCE: u64 = 1100;// 1100 because 100 are useful for increase reserve = 100
 const EGLD:u64 = 1000;
 pub const FLIP_TOKEN_ID: &[u8] = b"FLIP-123456";
 const TEN_PERCENT: u64 = 10_000_000;
