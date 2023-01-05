@@ -1,7 +1,7 @@
 use elrond_wasm::elrond_codec::multi_types::OptionalValue;
 use flip::storage::StorageModule;
 use flip::admin::AdminModule;
-use elrond_wasm_debug::{rust_biguint, testing_framework::*, managed_biguint, managed_egld_token_id, managed_token_id_wrapped, managed_address};
+use elrond_wasm_debug::{rust_biguint, managed_biguint, managed_egld_token_id, managed_token_id_wrapped, managed_address};
 
 use flip::*;
 
@@ -9,7 +9,7 @@ pub type RustBigUint = num_bigint::BigUint;
 
 mod flip_setup;
 use flip_setup::*;
-use crate::flip_setup::{EGLD_TOKEN_ID,FLIP_TOKEN_ID};
+use crate::flip_setup::{EGLD_TOKEN_ID,FLIP_TOKEN_ID,TEN_PERCENT};
 
 
 #[test]
@@ -139,9 +139,6 @@ fn withdraw_reserve() {
 
             assert_eq!(actual_reserve,expected_reserve);
 
-            println!("{:?}", actual_reserve);
-            println!("{:?}", expected_reserve)
-
         }).assert_ok();
 
     setup.blockchain_wrapper.check_egld_balance(setup.contract_wrapper.address_ref(),&rust_biguint!(100));
@@ -149,6 +146,98 @@ fn withdraw_reserve() {
 
 
 }
+
+#[test]
+fn set_maximum_bet_percent_test(){
+    let mut setup = FlipContractSetup::new(flip::contract_obj);
+
+    setup
+        .blockchain_wrapper
+        .execute_tx(
+            &setup.owner_address,
+            &setup.contract_wrapper,
+            &rust_biguint!(0),
+            |sc|{
+                sc.set_maximum_bet_percent(
+                    managed_token_id_wrapped!(FLIP_TOKEN_ID),
+                    0,
+                    TEN_PERCENT
+                )
+            }
+
+        ).assert_ok();
+
+    setup
+        .blockchain_wrapper
+        .execute_query(
+            &setup.contract_wrapper,|sc|{
+                let maximum_bet_percent = sc.maximum_bet_percent(&managed_token_id_wrapped!(FLIP_TOKEN_ID), 0).get();
+                let expected = TEN_PERCENT;
+
+                assert_eq!(maximum_bet_percent,expected)
+            }
+        ).assert_ok()
+}
+
+#[test]
+fn set_maximum_bet_test(){
+    let mut setup = FlipContractSetup::new(flip::contract_obj);
+
+    setup
+        .blockchain_wrapper
+        .execute_tx(
+            &setup.owner_address,
+            &setup.contract_wrapper,
+            &rust_biguint!(0),
+            |sc|{
+                sc.set_maximum_bet(
+                    managed_token_id_wrapped!(FLIP_TOKEN_ID),
+                    0,
+                    managed_biguint!(10)
+                )
+            }
+        ).assert_ok();
+
+    setup
+        .blockchain_wrapper
+        .execute_query(
+            &setup.contract_wrapper,|sc|{
+                let maximum_bet = sc.maximum_bet(&managed_token_id_wrapped!(FLIP_TOKEN_ID), 0).get();
+                let expected = managed_biguint!(10);
+
+                assert_eq!(maximum_bet,expected)
+            }
+        ).assert_ok()
+}
+
+#[test]
+fn set_minimum_block_bounty(){
+    let mut setup = FlipContractSetup::new(flip::contract_obj);
+
+    setup
+        .blockchain_wrapper
+        .execute_tx(
+            &setup.owner_address,
+            &setup.contract_wrapper,
+            &rust_biguint!(0),
+            |sc|{
+                sc.set_minimum_block_bounty(2u64)
+            }
+        ).assert_ok();
+
+    setup
+        .blockchain_wrapper
+        .execute_query(
+            &setup.contract_wrapper,|sc|{
+                let minimum_block_bounty = sc.minimum_block_bounty().get();
+                let expected = 2u64;
+
+                assert_eq!(minimum_block_bounty,expected)
+            }
+        ).assert_ok()
+
+}
+
 
 #[test]
 fn single_flip_egld() {
@@ -296,19 +385,101 @@ fn multiple_flip_bounty() {
     let bob = setup.bob.clone();
     let carol = setup.carol.clone();
 
+    setup.increase_reserve(&EGLD_TOKEN_ID, 100).assert_ok();
+    setup.increase_reserve(&FLIP_TOKEN_ID, 100).assert_ok();
+
+    setup.execute_flip(&alice, &EGLD_TOKEN_ID, &amount).assert_ok();
+    setup.execute_flip(&bob, &FLIP_TOKEN_ID, &amount).assert_ok();
+
+    // set new block nonce
+    setup.blockchain_wrapper.set_block_nonce(10);
+    setup.execute_flip(&alice, &FLIP_TOKEN_ID, &amount).assert_ok();
+
+    setup.blockchain_wrapper.set_block_nonce(13);
+    setup.execute_flip(&bob, &FLIP_TOKEN_ID, &amount).assert_ok();
+
+    setup.blockchain_wrapper.set_block_nonce(14);
+    setup.execute_flip(&alice, &EGLD_TOKEN_ID, &amount).assert_ok();
+
+    setup.blockchain_wrapper.set_block_nonce(16);
+    setup.execute_flip_bounty(&carol);
+
+    setup.blockchain_wrapper.check_esdt_balance(&carol, &FLIP_TOKEN_ID, &rust_biguint!(1003));
+    setup.blockchain_wrapper.check_egld_balance(&carol, &rust_biguint!(1002));
+}
+
+    //Several bounty, some of them higher than minimum block bounty
+    #[test]
+    fn multiple_flip_bounty_err(){
+        let mut setup = FlipContractSetup::new(flip::contract_obj);
+        let amount = rust_biguint!(10);
+        let alice = setup.alice.clone();
+        let bob = setup.bob.clone();
+        let carol = setup.carol.clone();
+
     setup.increase_reserve(&EGLD_TOKEN_ID,100).assert_ok();
     setup.increase_reserve(&FLIP_TOKEN_ID,100).assert_ok();
 
     setup.execute_flip(&alice,&EGLD_TOKEN_ID,&amount).assert_ok();
-    setup.execute_flip(&bob,&EGLD_TOKEN_ID,&amount).assert_ok();
-
-    // set new block nonce
-    setup.blockchain_wrapper.set_block_nonce(2);
-    setup.execute_flip(&alice,&FLIP_TOKEN_ID,&amount).assert_ok();
-
-    setup.blockchain_wrapper.set_block_nonce(11);
-    setup.execute_flip(&alice,&FLIP_TOKEN_ID,&amount).assert_ok();
     setup.execute_flip(&bob,&FLIP_TOKEN_ID,&amount).assert_ok();
 
-    setup.execute_flip_bounty(&carol)
+    setup.blockchain_wrapper.set_block_nonce(10);
+    setup.execute_flip(&alice,&FLIP_TOKEN_ID,&amount).assert_ok();
+
+    setup.blockchain_wrapper.set_block_nonce(13);
+    setup.execute_flip(&bob,&FLIP_TOKEN_ID,&amount).assert_ok();
+
+    setup.blockchain_wrapper.set_block_nonce(14);
+    setup.execute_flip(&alice,&EGLD_TOKEN_ID,&amount).assert_ok();
+
+    setup.execute_flip_bounty(&carol);
+
+    setup.blockchain_wrapper.check_esdt_balance(&carol,&FLIP_TOKEN_ID,&rust_biguint!(1002));
+    setup.blockchain_wrapper.check_egld_balance(&carol,&rust_biguint!(1001));
+}
+
+#[test]
+fn bounty_block_error(){
+    let mut setup = FlipContractSetup::new(flip::contract_obj);
+    let amount = rust_biguint!(10);
+    let alice = setup.alice.clone();
+    let bob = setup.bob.clone();
+
+    setup.blockchain_wrapper.set_block_nonce(10);
+    setup.increase_reserve(&EGLD_TOKEN_ID,100).assert_ok();
+    setup.execute_flip(&alice,&EGLD_TOKEN_ID,&amount).assert_ok();
+    setup
+        .blockchain_wrapper
+        .execute_tx(
+            &bob,
+            &setup.contract_wrapper,
+            &rust_biguint!(0),
+            |sc| {
+                sc.flip_bounty()
+
+            }).assert_user_error("no bounty");
+}
+
+#[test]
+fn flip_sup_max_bet_percent_error(){
+    let mut setup = FlipContractSetup::new(flip::contract_obj);
+    let amount = rust_biguint!(10);
+    let alice = setup.alice.clone();
+
+    setup.increase_reserve(&EGLD_TOKEN_ID,50).assert_ok();
+    setup.execute_flip(&alice,&EGLD_TOKEN_ID,&amount)
+        .assert_user_error("too much bet");
+
+}
+
+#[test]
+fn flip_sup_max_bet_error(){
+    let mut setup = FlipContractSetup::new(flip::contract_obj);
+    let amount = rust_biguint!(20);
+    let alice = setup.alice.clone();
+
+    setup.increase_reserve(&EGLD_TOKEN_ID,1000).assert_ok();
+    setup.execute_flip(&alice,&EGLD_TOKEN_ID,&amount)
+        .assert_user_error("too much bet");
+
 }

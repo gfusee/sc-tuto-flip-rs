@@ -12,7 +12,7 @@ pub const EGLD_TOKEN_ID: &[u8] = b"EGLD";
 const OWNER_BALANCE: u64 = 1100;// 1100 because 100 are useful for increase reserve = 100
 const EGLD:u64 = 1000;
 pub const FLIP_TOKEN_ID: &[u8] = b"FLIP-123456";
-const TEN_PERCENT: u64 = 10_000_000;
+pub(crate) const TEN_PERCENT: u64 = 10_000_000;
 
 pub struct FlipContractSetup<FlipContractObjBuilder>
     where
