@@ -58,7 +58,7 @@
                     "balance": "*",
                     "esdt": "*",
                     "storage": {
-                        "str:token_reserve|nested:str:USDC-abcdef|u64:1": "100,094,000",
+                        "str:token_reserve|nested:str:USDC-abcdef|u64:0": "100,094,000",
                         "+": "*"
                     },
                     "code": "*"
@@ -69,7 +69,7 @@
                         "str:USDC-abcdef": {
                             "instances": [
                                 {
-                                    "nonce": "1",
+                                    "nonce": "0",
                                     "balance": "5,000"
                                 }
                             ]
@@ -82,7 +82,7 @@
                         "str:USDC-abcdef": {
                             "instances": [
                                 {
-                                    "nonce": "1",
+                                    "nonce": "0",
                                     "balance": "99,900,000"
                                 }
                             ]
@@ -95,7 +95,7 @@
                         "str:USDC-abcdef": {
                             "instances": [
                                 {
-                                    "nonce": "1",
+                                    "nonce": "0",
                                     "balance": "1,000"
                                 }
                             ]

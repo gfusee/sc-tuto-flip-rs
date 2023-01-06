@@ -18,7 +18,7 @@
                 "esdtValue": [
                     {
                         "tokenIdentifier": "str:USDC-abcdef",
-                        "nonce": "1",
+                        "nonce": "0",
                         "value": "100,000"
                     }
                 ],
@@ -43,7 +43,7 @@
                         "str:USDC-abcdef": {
                             "instances": [
                                 {
-                                    "nonce": "1",
+                                    "nonce": "0",
                                     "balance": "5,000"
                                 }
                             ]
@@ -55,7 +55,7 @@
                     "balance": "*",
                     "esdt": "*",
                     "storage": {
-                        "str:token_reserve|nested:str:USDC-abcdef|u64:1": "99,906,000",
+                        "str:token_reserve|nested:str:USDC-abcdef|u64:0": "99,906,000",
                         "+": "*"
                     },
                     "code": "*"
