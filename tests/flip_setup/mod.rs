@@ -1,7 +1,6 @@
-use flip::storage::StorageModule;
 use flip::admin::AdminModule;
 use elrond_wasm::types::{Address, EgldOrEsdtTokenIdentifier};
-use elrond_wasm_debug::{rust_biguint, testing_framework::*, DebugApi, managed_biguint, managed_token_id_wrapped};
+use elrond_wasm_debug::{rust_biguint, testing_framework::*, DebugApi, managed_biguint};
 use elrond_wasm_debug::tx_mock::TxResult;
 use flip::*;
 
