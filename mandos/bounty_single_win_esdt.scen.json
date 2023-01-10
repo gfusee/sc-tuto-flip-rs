@@ -57,7 +57,7 @@
                     "balance": "*",
                     "esdt": "*",
                     "storage": {
-                        "str:token_reserve|nested:str:TOKN-abcdef|u64:0": "99,906,000",
+                        "str:token_reserve|nested:str:TOKN-abcdef|u64:1": "99,906,000",
                         "+": "*"
                     },
                     "code": "*"
@@ -68,7 +68,7 @@
                         "str:TOKN-abcdef": {
                             "instances": [
                                 {
-                                    "nonce": "0",
+                                    "nonce": "1",
                                     "balance": "5,000"
                                 }
                             ]
@@ -81,7 +81,7 @@
                         "str:TOKN-abcdef": {
                             "instances": [
                                 {
-                                    "nonce": "0",
+                                    "nonce": "1",
                                     "balance": "100,088,000"
                                 }
                             ]
@@ -94,7 +94,7 @@
                         "str:TOKN-abcdef": {
                             "instances": [
                                 {
-                                    "nonce": "0",
+                                    "nonce": "1",
                                     "balance": "1,000"
                                 }
                             ]
