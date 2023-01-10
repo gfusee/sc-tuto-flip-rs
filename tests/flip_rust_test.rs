@@ -9,7 +9,7 @@ pub type RustBigUint = num_bigint::BigUint;
 
 mod flip_setup;
 use flip_setup::*;
-use crate::flip_setup::{EGLD_TOKEN_ID,FLIP_TOKEN_ID,TEN_PERCENT};
+use crate::flip_setup::{EGLD_TOKEN_ID,FLIP_TOKEN_ID,TEN_PERCENT,HUNDRED,OWNER_BALANCE};
 
 
 #[test]
@@ -107,6 +107,26 @@ fn withdraw_reserve_egld() {
         .assert_ok();
 
     setup.blockchain_wrapper.check_egld_balance(setup.contract_wrapper.address_ref(),&rust_biguint!(HUNDRED));
+
+    //Test OptionalValue::None for withdraw all EGLD
+    setup
+        .blockchain_wrapper
+        .execute_tx(
+            &setup.owner_address,
+            &setup.contract_wrapper,
+            &rust_biguint!(0),
+            |sc|{
+                sc.withdraw_reserve(
+                    managed_egld_token_id!(),
+                    0,
+                    OptionalValue::None
+                )
+            }
+        )
+        .assert_ok();
+
+    setup.blockchain_wrapper.check_egld_balance(setup.contract_wrapper.address_ref(),&rust_biguint!(0));
+    setup.blockchain_wrapper.check_egld_balance(&setup.owner_address,&rust_biguint!(OWNER_BALANCE));
 }
 
 #[test]
@@ -147,6 +167,25 @@ fn withdraw_reserve_esdt(){
 
     setup.blockchain_wrapper.check_esdt_balance(setup.contract_wrapper.address_ref(), FLIP_TOKEN_ID, &rust_biguint!(HUNDRED));
 
+    //Test OptionalValue::None for withdraw all ESDT
+    setup
+        .blockchain_wrapper
+        .execute_tx(
+            &setup.owner_address,
+            &setup.contract_wrapper,
+            &rust_biguint!(0),
+            |sc|{
+                sc.withdraw_reserve(
+                    managed_token_id_wrapped!(FLIP_TOKEN_ID),
+                    0,
+                    OptionalValue::None
+                )
+            }
+        )
+        .assert_ok();
+
+    setup.blockchain_wrapper.check_esdt_balance(setup.contract_wrapper.address_ref(), FLIP_TOKEN_ID, &rust_biguint!(0));
+    setup.blockchain_wrapper.check_esdt_balance(&setup.owner_address, FLIP_TOKEN_ID, &rust_biguint!(OWNER_BALANCE));
 }
 
 #[test]

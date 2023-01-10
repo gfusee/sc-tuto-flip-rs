@@ -12,8 +12,6 @@ pub trait AdminModule:ContractBase +
     fn increase_reserve(&self) {
         let (payment_token, payment_nonce, payment_amount) = self.call_value().egld_or_single_esdt().into_tuple();
 
-
-
         require!(
             payment_amount > 0u64,
             "zero payment"
