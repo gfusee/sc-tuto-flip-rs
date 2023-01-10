@@ -3,7 +3,7 @@
     "steps": [
         {
             "step": "externalSteps",
-            "path": "flip_single_usdc.scen.json"
+            "path": "flip_single_esdt.scen.json"
         },
         {
             "step": "scCall",
@@ -58,7 +58,7 @@
                     "balance": "*",
                     "esdt": "*",
                     "storage": {
-                        "str:token_reserve|nested:str:USDC-abcdef|u64:0": "100,094,000",
+                        "str:token_reserve|nested:str:TOKN-abcdef|u64:0": "100,094,000",
                         "+": "*"
                     },
                     "code": "*"
@@ -66,7 +66,7 @@
                 "address:owner": {
                     "nonce": "*",
                     "esdt": {
-                        "str:USDC-abcdef": {
+                        "str:TOKN-abcdef": {
                             "instances": [
                                 {
                                     "nonce": "0",
@@ -79,7 +79,7 @@
                 "address:player1": {
                     "nonce": "*",
                     "esdt": {
-                        "str:USDC-abcdef": {
+                        "str:TOKN-abcdef": {
                             "instances": [
                                 {
                                     "nonce": "0",
@@ -92,7 +92,7 @@
                 "address:bounty1": {
                     "nonce": "*",
                     "esdt": {
-                        "str:USDC-abcdef": {
+                        "str:TOKN-abcdef": {
                             "instances": [
                                 {
                                     "nonce": "0",
