@@ -25,7 +25,7 @@ fn deploy_test() {
             &rust_biguint!(0),
             |sc| {
                 sc.init(10, 10, 10);
-            },
+            }
         )
         .assert_ok();
 
@@ -36,8 +36,7 @@ fn increase_reserve() {
     let mut setup = FlipContractSetup::new(flip::contract_obj);
 
     //Increase EGLD reserve
-    setup.increase_reserve(&EGLD_TOKEN_ID, HUNDRED)
-        .assert_ok();
+    setup.increase_reserve(&EGLD_TOKEN_ID, HUNDRED).assert_ok();
 
     //Check ESDT reserve
     setup
@@ -48,11 +47,11 @@ fn increase_reserve() {
 
             assert_eq!(actual_reserve,expected_reserve);
 
-        }).assert_ok();
+        })
+        .assert_ok();
 
     //Increase ESDT reserve
-    setup.increase_reserve(&FLIP_TOKEN_ID, HUNDRED)
-        .assert_ok();
+    setup.increase_reserve(&FLIP_TOKEN_ID, HUNDRED).assert_ok();
 
     //Check ESDT reserve
     setup
@@ -63,7 +62,8 @@ fn increase_reserve() {
 
             assert_eq!(actual_reserve,expected_reserve);
 
-        }).assert_ok();
+        })
+        .assert_ok();
 
     setup.blockchain_wrapper.check_egld_balance(&setup.contract_wrapper.address_ref(),&rust_biguint!(HUNDRED));
     setup.blockchain_wrapper.check_esdt_balance(&setup.contract_wrapper.address_ref(),FLIP_TOKEN_ID,&rust_biguint!(HUNDRED));
@@ -89,10 +89,10 @@ fn withdraw_reserve_egld() {
                     managed_egld_token_id!(),
                     0,
                     OptionalValue::Some(managed_biguint!(HUNDRED))
-
                 )
             }
-        ).assert_ok();
+        )
+        .assert_ok();
 
     //check reserve and balance EGLD
     setup
@@ -103,7 +103,8 @@ fn withdraw_reserve_egld() {
 
             assert_eq!(actual_reserve,expected_reserve);
 
-        }).assert_ok();
+        })
+        .assert_ok();
 
     setup.blockchain_wrapper.check_egld_balance(setup.contract_wrapper.address_ref(),&rust_biguint!(HUNDRED));
 }
@@ -127,10 +128,10 @@ fn withdraw_reserve_esdt(){
                     managed_token_id_wrapped!(FLIP_TOKEN_ID),
                     0,
                     OptionalValue::Some(managed_biguint!(HUNDRED))
-
                 )
             }
-        ).assert_ok();
+        )
+        .assert_ok();
 
     //check reserve and balance ESDT
     setup
@@ -141,7 +142,8 @@ fn withdraw_reserve_esdt(){
 
             assert_eq!(actual_reserve,expected_reserve);
 
-        }).assert_ok();
+        })
+        .assert_ok();
 
     setup.blockchain_wrapper.check_esdt_balance(setup.contract_wrapper.address_ref(), FLIP_TOKEN_ID, &rust_biguint!(HUNDRED));
 
@@ -163,9 +165,9 @@ fn set_maximum_bet_percent_test(){
                     0,
                     TEN_PERCENT
                 )
-            }
-
-        ).assert_ok();
+            },
+        )
+        .assert_ok();
 
     setup
         .blockchain_wrapper
@@ -176,7 +178,8 @@ fn set_maximum_bet_percent_test(){
 
                 assert_eq!(maximum_bet_percent,expected)
             }
-        ).assert_ok()
+        )
+        .assert_ok()
 }
 
 #[test]
@@ -197,7 +200,8 @@ fn set_maximum_bet_test(){
                     managed_biguint!(amount)
                 )
             }
-        ).assert_ok();
+        )
+        .assert_ok();
 
     setup
         .blockchain_wrapper
@@ -208,7 +212,8 @@ fn set_maximum_bet_test(){
 
                 assert_eq!(maximum_bet,expected)
             }
-        ).assert_ok()
+        )
+        .assert_ok()
 }
 
 #[test]
@@ -225,7 +230,8 @@ fn set_minimum_block_bounty(){
             |sc|{
                 sc.set_minimum_block_bounty(mini_block_bounty)
             }
-        ).assert_ok();
+        )
+        .assert_ok();
 
     setup
         .blockchain_wrapper
@@ -236,7 +242,8 @@ fn set_minimum_block_bounty(){
 
                 assert_eq!(minimum_block_bounty,expected)
             }
-        ).assert_ok()
+        )
+        .assert_ok()
 
 }
 
@@ -284,7 +291,8 @@ fn single_flip_egld() {
                 let expected_block_bounty = 2;
                 assert_eq!(minimum_block_bounty,expected_block_bounty);
             }
-        ).assert_ok();
+        )
+        .assert_ok();
 }
 
 #[test]
@@ -332,7 +340,8 @@ fn single_flip_esdt() {
                 let expected_block_bounty = 2;
                 assert_eq!(minimum_block_bounty,expected_block_bounty);
             }
-        ).assert_ok();
+        )
+        .assert_ok();
 
 }
 
@@ -458,8 +467,9 @@ fn bounty_block_error(){
             &rust_biguint!(0),
             |sc| {
                 sc.flip_bounty()
-
-            }).assert_user_error("no bounty");
+            }
+        )
+        .assert_user_error("no bounty");
 }
 
 #[test]

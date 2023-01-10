@@ -64,7 +64,8 @@ impl <FlipContractObjBuilder> FlipContractSetup<FlipContractObjBuilder>
                     0,
                     TEN_PERCENT
                 )
-            }).assert_ok();
+            })
+            .assert_ok();
 
         //set maximum bet EGLD
         blockchain_wrapper
@@ -74,8 +75,8 @@ impl <FlipContractObjBuilder> FlipContractSetup<FlipContractObjBuilder>
                     0,
                     managed_biguint!(10)
                 )
-            }
-            ).assert_ok();
+            })
+            .assert_ok();
 
         //set maximum bet percent ESDT
         blockchain_wrapper
@@ -85,7 +86,8 @@ impl <FlipContractObjBuilder> FlipContractSetup<FlipContractObjBuilder>
                     0,
                     TEN_PERCENT
                 )
-            }).assert_ok();
+            })
+            .assert_ok();
 
         //set maximum bet ESDT
         blockchain_wrapper
@@ -95,15 +97,15 @@ impl <FlipContractObjBuilder> FlipContractSetup<FlipContractObjBuilder>
                     0,
                     managed_biguint!(10)
                 )
-            }
-            ).assert_ok();
+            })
+            .assert_ok();
 
         // set minimum block bounty
         blockchain_wrapper
             .execute_tx(&owner_address, &flip_wrapper, &rust_biguint!(0), |sc| {
                 sc.set_minimum_block_bounty(2u64)
-            }
-            ).assert_ok();
+            })
+            .assert_ok();
 
 
         blockchain_wrapper.add_mandos_set_account(flip_wrapper.address_ref());
@@ -184,7 +186,8 @@ impl <FlipContractObjBuilder> FlipContractSetup<FlipContractObjBuilder>
                 |sc| {
                     sc.flip_bounty()
 
-                }).assert_ok();
+                })
+            .assert_ok();
     }
 }
 
