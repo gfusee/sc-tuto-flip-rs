@@ -36,10 +36,10 @@ pub trait FlipContract: ContractBase +
     }
 
     #[payable("*")]
-    #[endpoint(flip)]
+    #[endpoint]
     fn flip(
         &self) {
-        let (token_id, nonce,payment_amount ) = self.call_value().egld_or_single_esdt().into_tuple();
+        let (token_id, nonce, payment_amount ) = self.call_value().egld_or_single_esdt().into_tuple();
 
         let token_reserve = self.token_reserve(
             &token_id,
@@ -113,7 +113,8 @@ pub trait FlipContract: ContractBase +
                 &self.blockchain().get_owner_address(),
                 &token_id,
                 0,
-                &owner_profits);
+                &owner_profits
+        );
 
         self.flip_for_id(flip_id).set(flip);
         self.last_flip_id().set(flip_id);
@@ -187,7 +188,8 @@ pub trait FlipContract: ContractBase +
                 &bounty_address,
                 &flip.token_identifier,
                 flip.token_nonce,
-                &flip.bounty);
+                &flip.bounty
+            );
 
         let profit_if_win = &flip.amount * &BigUint::from(2u8);
 
@@ -197,7 +199,8 @@ pub trait FlipContract: ContractBase +
                     &flip.player_address,
                     &flip.token_identifier,
                     flip.token_nonce,
-                    &profit_if_win);
+                    &profit_if_win
+                );
         } else {
             self.token_reserve(
                 &flip.token_identifier,

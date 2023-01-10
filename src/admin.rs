@@ -9,9 +9,8 @@ pub trait AdminModule:ContractBase +
 
     #[payable("*")]
     #[endpoint(increaseReserve)]
-    fn increase_reserve(
-        &self) {
-        let (payment_token,payment_nonce,payment_amount) = self.call_value().egld_or_single_esdt().into_tuple();
+    fn increase_reserve(&self) {
+        let (payment_token, payment_nonce, payment_amount) = self.call_value().egld_or_single_esdt().into_tuple();
 
 
 
@@ -35,9 +34,9 @@ pub trait AdminModule:ContractBase +
         token_nonce: u64,
         amount: OptionalValue<BigUint<Self::Api>>
     ) {
-        let reserve_mapper = self.token_reserve(&token_identifier,token_nonce).get();
+        let reserve_mapper = self.token_reserve(&token_identifier, token_nonce).get();
         let withdraw_amount = match amount {
-            OptionalValue::Some(amt)=>amt,
+            OptionalValue::Some(amt) => amt,
             OptionalValue::None => reserve_mapper
         };
 
@@ -46,7 +45,8 @@ pub trait AdminModule:ContractBase +
             token_nonce
         ).update(|reserve|{
             require!(withdraw_amount > 0 && withdraw_amount <= *reserve,
-            "Invalid withdraw amount");
+            "Invalid withdraw amount"
+            );
 
             *reserve -= &withdraw_amount;
         });
@@ -56,7 +56,8 @@ pub trait AdminModule:ContractBase +
                 &self.blockchain().get_caller(),
                 &token_identifier,
                 0,
-                &withdraw_amount);
+                &withdraw_amount
+            );
     }
 
     #[only_owner]
