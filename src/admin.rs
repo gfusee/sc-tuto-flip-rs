@@ -1,19 +1,16 @@
 use crate::storage;
 elrond_wasm::imports!();
+elrond_wasm::derive_imports!();
 
 #[elrond_wasm::derive::module]
-pub trait AdminModule:// ContractBase +
+pub trait AdminModule:ContractBase +
     storage::StorageModule
 {
 
     #[payable("*")]
     #[endpoint(increaseReserve)]
-    fn increase_reserve(
-        &self,
-        #[payment_token] payment_token: TokenIdentifier<Self::Api>,
-        #[payment_nonce] payment_nonce: u64,
-        #[payment_amount] payment_amount: BigUint<Self::Api>
-    ) {
+    fn increase_reserve(&self) {
+        let (payment_token, payment_nonce, payment_amount) = self.call_value().egld_or_single_esdt().into_tuple();
 
         require!(
             payment_amount > 0u64,
@@ -31,27 +28,33 @@ pub trait AdminModule:// ContractBase +
     #[endpoint(withdrawReserve)]
     fn withdraw_reserve(
         &self,
-        token_identifier: TokenIdentifier<Self::Api>,
+        token_identifier: EgldOrEsdtTokenIdentifier<Self::Api>,
         token_nonce: u64,
-        amount: BigUint<Self::Api>
+        amount: OptionalValue<BigUint<Self::Api>>
     ) {
-        let token_reserve = self.token_reserve(
+        let reserve_mapper = self.token_reserve(&token_identifier, token_nonce).get();
+        let withdraw_amount = match amount {
+            OptionalValue::Some(amt) => amt,
+            OptionalValue::None => reserve_mapper
+        };
+
+        self.token_reserve(
             &token_identifier,
             token_nonce
-        ).get();
+        ).update(|reserve|{
+            require!(withdraw_amount > 0 && withdraw_amount <= *reserve,
+            "Invalid withdraw amount"
+            );
 
-        require!(
-            amount <= token_reserve,
-            "amount too high"
-        );
+            *reserve -= &withdraw_amount;
+        });
 
         self.send()
             .direct(
                 &self.blockchain().get_caller(),
                 &token_identifier,
                 token_nonce,
-                &amount,
-                &[]
+                &withdraw_amount
             );
     }
 
@@ -59,7 +62,7 @@ pub trait AdminModule:// ContractBase +
     #[endpoint(setMaximumBetPercent)]
     fn set_maximum_bet_percent(
         &self,
-        token_identifier: TokenIdentifier<Self::Api>,
+        token_identifier: EgldOrEsdtTokenIdentifier<Self::Api>,
         token_nonce: u64,
         percent: u64
     ) {
@@ -80,7 +83,7 @@ pub trait AdminModule:// ContractBase +
     #[endpoint(setMaximumBet)]
     fn set_maximum_bet(
         &self,
-        token_identifier: TokenIdentifier<Self::Api>,
+        token_identifier: EgldOrEsdtTokenIdentifier<Self::Api>,
         token_nonce: u64,
         amount: BigUint<Self::Api>
     ) {

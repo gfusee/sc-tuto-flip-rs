@@ -3,7 +3,7 @@
     "steps": [
         {
             "step": "externalSteps",
-            "path": "flip_single_usdc.scen.json"
+            "path": "flip_single_esdt.scen.json"
         },
         {
             "step": "scCall",
@@ -27,7 +27,8 @@
         {
             "step": "setState",
             "currentBlockInfo": {
-                "blockNonce": "1"
+                "blockNonce": "1",
+                "blockRandomSeed": "0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003"
             }
         },
         {
@@ -57,7 +58,7 @@
                     "balance": "*",
                     "esdt": "*",
                     "storage": {
-                        "str:token_reserve|nested:str:USDC-abcdef|u64:1": "99,906,000",
+                        "str:token_reserve|nested:str:TOKN-abcdef|u64:1": "100,094,000",
                         "+": "*"
                     },
                     "code": "*"
@@ -65,7 +66,7 @@
                 "address:owner": {
                     "nonce": "*",
                     "esdt": {
-                        "str:USDC-abcdef": {
+                        "str:TOKN-abcdef": {
                             "instances": [
                                 {
                                     "nonce": "1",
@@ -78,11 +79,11 @@
                 "address:player1": {
                     "nonce": "*",
                     "esdt": {
-                        "str:USDC-abcdef": {
+                        "str:TOKN-abcdef": {
                             "instances": [
                                 {
                                     "nonce": "1",
-                                    "balance": "100,088,000"
+                                    "balance": "99,900,000"
                                 }
                             ]
                         }
@@ -91,7 +92,7 @@
                 "address:bounty1": {
                     "nonce": "*",
                     "esdt": {
-                        "str:USDC-abcdef": {
+                        "str:TOKN-abcdef": {
                             "instances": [
                                 {
                                     "nonce": "1",

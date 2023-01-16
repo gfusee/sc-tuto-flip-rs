@@ -5,15 +5,15 @@ use crate::structs::Flip;
 
 const HUNDRED_PERCENT: u64 = 100_000_000;
 
-mod storage;
-mod structs;
-mod admin;
+pub mod storage;
+pub mod structs;
+pub mod admin;
 
 elrond_wasm::imports!();
 elrond_wasm::derive_imports!();
 
 #[elrond_wasm::derive::contract]
-pub trait FlipContract:// ContractBase +
+pub trait FlipContract: ContractBase +
     storage::StorageModule + admin::AdminModule
 {
 
@@ -38,15 +38,12 @@ pub trait FlipContract:// ContractBase +
     #[payable("*")]
     #[endpoint]
     fn flip(
-        &self,
-        #[payment_amount] payment_amount: BigUint<Self::Api>,
-        #[payment_token] payment_token: TokenIdentifier<Self::Api>,
-        #[payment_nonce] payment_nonce: u64
-    ) {
+        &self) {
+        let (token_id, nonce, payment_amount ) = self.call_value().egld_or_single_esdt().into_tuple();
 
         let token_reserve = self.token_reserve(
-            &payment_token,
-            payment_nonce
+            &token_id,
+            nonce
         ).get();
 
         require!(
@@ -55,23 +52,23 @@ pub trait FlipContract:// ContractBase +
         );
 
         require!(
-            !self.maximum_bet(&payment_token, payment_nonce).is_empty(),
+            !self.maximum_bet(&token_id, nonce).is_empty(),
             "no maximum bet"
         );
 
         require!(
-            !self.maximum_bet_percent(&payment_token, payment_nonce).is_empty(),
+            !self.maximum_bet_percent(&token_id, nonce).is_empty(),
             "no maximum bet percent"
         );
 
         let maximum_bet = self.maximum_bet(
-            &payment_token,
-            payment_nonce
+            &token_id,
+            nonce
         ).get();
 
         let maximum_bet_percent = self.maximum_bet_percent(
-            &payment_token,
-            payment_nonce
+            &token_id,
+            nonce
         ).get();
 
         let max_allowed_bet = min(
@@ -99,8 +96,8 @@ pub trait FlipContract:// ContractBase +
         let flip = Flip {
             id: flip_id,
             player_address: self.blockchain().get_caller(),
-            token_identifier: payment_token.clone(),
-            token_nonce: payment_nonce,
+            token_identifier: token_id.clone(),
+            token_nonce: nonce,
             amount: amount.clone(),
             bounty: bounty.clone(),
             block_nonce: self.blockchain().get_block_nonce(),
@@ -108,18 +105,16 @@ pub trait FlipContract:// ContractBase +
         };
 
         self.token_reserve(
-            &payment_token,
-            payment_nonce
+            &token_id,
+            nonce
         ).update(|reserve| *reserve -= &amount);
 
-        self.send()
-            .direct(
+        self.send().direct(
                 &self.blockchain().get_owner_address(),
-                &payment_token,
-                payment_nonce,
-                &owner_profits,
-                &[]
-            );
+                &token_id,
+                nonce,
+                &owner_profits
+        );
 
         self.flip_for_id(flip_id).set(flip);
         self.last_flip_id().set(flip_id);
@@ -184,7 +179,7 @@ pub trait FlipContract:// ContractBase +
         flip: &Flip<Self::Api>
     ) {
 
-        let mut rand_source = RandomnessSource::<Self::Api>::new();
+        let mut rand_source = RandomnessSource::new();
         let random_number = rand_source.next_u8_in_range(0, 2);
         let is_win = random_number == 1u8;
 
@@ -193,8 +188,7 @@ pub trait FlipContract:// ContractBase +
                 &bounty_address,
                 &flip.token_identifier,
                 flip.token_nonce,
-                &flip.bounty,
-                &[]
+                &flip.bounty
             );
 
         let profit_if_win = &flip.amount * &BigUint::from(2u8);
@@ -205,8 +199,7 @@ pub trait FlipContract:// ContractBase +
                     &flip.player_address,
                     &flip.token_identifier,
                     flip.token_nonce,
-                    &profit_if_win,
-                    &[]
+                    &profit_if_win
                 );
         } else {
             self.token_reserve(

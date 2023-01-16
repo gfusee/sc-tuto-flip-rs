@@ -16,7 +16,7 @@ pub trait StorageModule {
     #[storage_mapper("maximum_bet")]
     fn maximum_bet(
         &self,
-        token_identifier: &TokenIdentifier<Self::Api>,
+        token_identifier: &EgldOrEsdtTokenIdentifier<Self::Api>,
         token_nonce: u64
     ) -> SingleValueMapper<Self::Api, BigUint<Self::Api>>;
 
@@ -24,7 +24,7 @@ pub trait StorageModule {
     #[storage_mapper("maximum_bet_percent")]
     fn maximum_bet_percent(
         &self,
-        token_identifier: &TokenIdentifier<Self::Api>,
+        token_identifier: &EgldOrEsdtTokenIdentifier<Self::Api>,
         token_nonce: u64
     ) -> SingleValueMapper<Self::Api, u64>;
 
@@ -36,7 +36,7 @@ pub trait StorageModule {
     #[storage_mapper("token_reserve")]
     fn token_reserve(
         &self,
-        token_identifier: &TokenIdentifier<Self::Api>,
+        token_identifier: &EgldOrEsdtTokenIdentifier<Self::Api>,
         token_nonce: u64
     ) -> SingleValueMapper<Self::Api, BigUint<Self::Api>>;
 

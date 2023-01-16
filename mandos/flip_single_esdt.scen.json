@@ -7,7 +7,7 @@
         },
         {
             "step": "externalSteps",
-            "path": "setup_usdc._scen.json"
+            "path": "setup_esdt._scen.json"
         },
         {
             "step": "scCall",
@@ -17,7 +17,7 @@
                 "to": "sc:flip",
                 "esdtValue": [
                     {
-                        "tokenIdentifier": "str:USDC-abcdef",
+                        "tokenIdentifier": "str:TOKN-abcdef",
                         "nonce": "1",
                         "value": "100,000"
                     }
@@ -40,7 +40,7 @@
                 "address:owner": {
                     "nonce": "*",
                     "esdt": {
-                        "str:USDC-abcdef": {
+                        "str:TOKN-abcdef": {
                             "instances": [
                                 {
                                     "nonce": "1",
@@ -55,7 +55,7 @@
                     "balance": "*",
                     "esdt": "*",
                     "storage": {
-                        "str:token_reserve|nested:str:USDC-abcdef|u64:1": "99,906,000",
+                        "str:token_reserve|nested:str:TOKN-abcdef|u64:1": "99,906,000",
                         "+": "*"
                     },
                     "code": "*"
