@@ -53,7 +53,7 @@ pub trait AdminModule:ContractBase +
             .direct(
                 &self.blockchain().get_caller(),
                 &token_identifier,
-                0,
+                token_nonce,
                 &withdraw_amount
             );
     }
